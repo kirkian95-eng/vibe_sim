@@ -15,7 +15,7 @@ import sys
 def run_dashboard():
     """Start the Flask dashboard."""
     from dashboard.app import main
-    print("Starting VibeSim dashboard on http://localhost:5000")
+    print("Starting VibeSim dashboard on http://localhost:5001")
     print("Press Ctrl+C to stop")
     main()
 

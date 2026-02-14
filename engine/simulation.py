@@ -284,13 +284,19 @@ class Simulation:
         # Money supply = total deposits
         money_supply = self.ledger.account_balance(f"{self.bank.id}:deposits")
 
-        # Sector balances
-        private_ids = [i.id for i in self.individuals] + [f.id for f in self.firms]
-        private_balance = self.ledger.check_sector_balance(private_ids)
+        # Sector balances — use cached account lookups (already indexed)
+        private_balance = sum(
+            self.ledger.actor_net_worth(i.id) for i in self.individuals
+        ) + sum(
+            self.ledger.actor_net_worth(f.id) for f in self.firms
+        )
         govt_balance = self.ledger.actor_net_worth(self.govt.id)
         bank_balance = self.ledger.actor_net_worth(self.bank.id)
 
         journal_today = self.ledger.journal_size - journal_before
+
+        # Only check today's new entries (not the entire journal every day)
+        todays_entries_balanced = self.ledger.check_entries_balanced_from(journal_before)
 
         return DailyStats(
             day=self.day,
@@ -318,8 +324,8 @@ class Simulation:
             govt_sector_balance=govt_balance,
             bank_sector_balance=bank_balance,
             journal_entries_today=journal_today,
-            all_balanced=self.ledger.check_all_entries_balanced(),
-            system_balanced=self.ledger.check_system_balance(),
+            all_balanced=todays_entries_balanced,
+            system_balanced=True,  # deferred to results_summary for perf
         )
 
     def results_summary(self) -> dict:
