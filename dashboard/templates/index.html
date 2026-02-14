@@ -245,6 +245,74 @@
             gap: 12px;
         }
         .empty-state .icon { font-size: 48px; opacity: 0.3; }
+        .city-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+        }
+        .city-btn {
+            width: auto;
+            margin-top: 0;
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        .city-speed-label {
+            margin: 0;
+            color: var(--text);
+            font-size: 11px;
+        }
+        #city-speed {
+            margin: 0;
+            width: 120px;
+        }
+        #city-speed-value {
+            font-size: 11px;
+            color: var(--accent4);
+            min-width: 24px;
+        }
+        #city-day-counter {
+            margin-left: auto;
+            font-size: 11px;
+            color: var(--text-dim);
+        }
+        .city-stats-bar {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .city-stat {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 11px;
+            color: var(--text-dim);
+        }
+        .city-stat strong {
+            display: block;
+            color: var(--text);
+            font-size: 13px;
+            margin-top: 2px;
+        }
+        .city-canvas-wrap {
+            background: #11141d;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px;
+        }
+        #city-canvas {
+            width: 100%;
+            height: min(70vh, 640px);
+            border-radius: 6px;
+            display: block;
+            background: #0f1117;
+        }
     </style>
 </head>
 <body>
@@ -366,15 +434,29 @@
             </div>
             <div id="results" style="display:none">
                 <div class="tab-bar">
-                    <button class="tab active" onclick="showTab('macro')">Macro</button>
-                    <button class="tab" onclick="showTab('prices')">Prices</button>
-                    <button class="tab" onclick="showTab('distribution')">Distribution</button>
-                    <button class="tab" onclick="showTab('sectors')">Sector Balances</button>
-                    <button class="tab" onclick="showTab('production')">Production</button>
+                    <button class="tab active" onclick="showTab('macro', this)">Macro</button>
+                    <button class="tab" onclick="showTab('prices', this)">Prices</button>
+                    <button class="tab" onclick="showTab('distribution', this)">Distribution</button>
+                    <button class="tab" onclick="showTab('sectors', this)">Sector Balances</button>
+                    <button class="tab" onclick="showTab('production', this)">Production</button>
+                    <button class="tab" onclick="showTab('city', this)">City View</button>
                 </div>
 
                 <div class="kpi-grid" id="kpis"></div>
                 <div class="charts-grid" id="charts"></div>
+                <div id="city-view" style="display:none">
+                    <div class="city-controls">
+                        <button class="secondary city-btn" id="city-play-toggle">Pause</button>
+                        <label for="city-speed" class="city-speed-label">Speed</label>
+                        <input type="range" id="city-speed" min="0" max="3" step="1" value="0">
+                        <span id="city-speed-value">1x</span>
+                        <span id="city-day-counter">Day 1 / 1</span>
+                    </div>
+                    <div class="city-stats-bar" id="city-stats-bar"></div>
+                    <div class="city-canvas-wrap">
+                        <canvas id="city-canvas" width="960" height="540"></canvas>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -393,6 +475,31 @@ const PLOTLY_LAYOUT = {
 
 let currentData = null;
 let baselineData = null;
+let activeTab = 'macro';
+
+const CITY_SPEEDS = [1, 2, 5, 10];
+const CITY_CANVAS_SIZE = { width: 960, height: 540 };
+const CITY_ROLES = {
+    OWNER: 'owner',
+    EMPLOYED: 'employed',
+    UNEMPLOYED: 'unemployed',
+};
+const cityState = {
+    canvas: null,
+    ctx: null,
+    initialized: false,
+    rafId: null,
+    playing: true,
+    speedIndex: 0,
+    dayFloat: 0,
+    currentDay: 0,
+    lastTs: 0,
+    numAgents: 100,
+    layout: null,
+    agents: [],
+    data: null,
+    currentStats: null,
+};
 
 function getConfig() {
     return {
@@ -418,6 +525,488 @@ function setStatus(msg, type) {
     el.textContent = msg;
 }
 
+function ensureCityControls() {
+    if (cityState.initialized) return;
+    cityState.canvas = document.getElementById('city-canvas');
+    cityState.ctx = cityState.canvas.getContext('2d');
+
+    const playToggle = document.getElementById('city-play-toggle');
+    playToggle.addEventListener('click', () => {
+        cityState.playing = !cityState.playing;
+        playToggle.textContent = cityState.playing ? 'Pause' : 'Play';
+    });
+
+    const speedInput = document.getElementById('city-speed');
+    speedInput.addEventListener('input', () => {
+        cityState.speedIndex = +speedInput.value;
+        document.getElementById('city-speed-value').textContent = `${CITY_SPEEDS[cityState.speedIndex]}x`;
+    });
+
+    window.addEventListener('resize', resizeCityCanvas);
+    resizeCityCanvas();
+    cityState.initialized = true;
+}
+
+function resizeCityCanvas() {
+    if (!cityState.canvas) return;
+    const rect = cityState.canvas.getBoundingClientRect();
+    const width = Math.max(300, Math.floor(rect.width));
+    const height = Math.max(220, Math.floor(rect.height));
+    cityState.canvas.width = width;
+    cityState.canvas.height = height;
+}
+
+function cityPoint(col, row) {
+    const cellW = CITY_CANVAS_SIZE.width / 12;
+    const cellH = CITY_CANVAS_SIZE.height / 8;
+    return {
+        x: (col + 0.5) * cellW,
+        y: (row + 0.5) * cellH,
+    };
+}
+
+function createBuilding(col, row, type, color, label) {
+    const cellW = CITY_CANVAS_SIZE.width / 12;
+    const cellH = CITY_CANVAS_SIZE.height / 8;
+    const width = cellW * 0.8;
+    const height = cellH * 0.7;
+    return {
+        type,
+        color,
+        label,
+        x: col * cellW + (cellW - width) / 2,
+        y: row * cellH + (cellH - height) / 2,
+        width,
+        height,
+        entrance: cityPoint(col, row),
+    };
+}
+
+function generateCityLayout(config) {
+    const buildings = [];
+    const firms = [];
+    const homes = [];
+
+    buildings.push(createBuilding(1, 5, 'govt', '#8892a6', 'Govt'));
+    buildings.push(createBuilding(0, 0, 'park', '#2c6e49', 'Park'));
+
+    const foodSlots = [[1, 1], [3, 1], [1, 3], [3, 3], [1, 5], [3, 5]];
+    const energySlots = [[0, 2], [2, 2], [0, 4], [2, 4], [0, 6], [2, 6]];
+    const shelterSlots = [[4, 1], [4, 3], [4, 5], [6, 1], [6, 3], [6, 5]];
+
+    for (let i = 0; i < config.num_food_firms; i += 1) {
+        const slot = foodSlots[i % foodSlots.length];
+        const b = createBuilding(slot[0], slot[1], 'food', '#46b96a', `Food ${i + 1}`);
+        buildings.push(b);
+        firms.push(b);
+    }
+    for (let i = 0; i < config.num_energy_firms; i += 1) {
+        const slot = energySlots[i % energySlots.length];
+        const b = createBuilding(slot[0], slot[1], 'energy', '#e6b83d', `Energy ${i + 1}`);
+        buildings.push(b);
+        firms.push(b);
+    }
+    for (let i = 0; i < config.num_shelter_firms; i += 1) {
+        const slot = shelterSlots[i % shelterSlots.length];
+        const b = createBuilding(slot[0], slot[1], 'shelter', '#4e98d1', `Shelter ${i + 1}`);
+        buildings.push(b);
+        firms.push(b);
+    }
+
+    const homeCols = [8, 9, 10, 11];
+    const homeRows = [1, 2, 3, 4, 5, 6];
+    for (let i = 0; i < 24; i += 1) {
+        const col = homeCols[i % homeCols.length];
+        const row = homeRows[Math.floor(i / homeCols.length) % homeRows.length];
+        const h = createBuilding(col, row, 'home', '#6f7fa8', `Home ${i + 1}`);
+        homes.push(h);
+    }
+
+    return {
+        roads: { cellW: CITY_CANVAS_SIZE.width / 12, cellH: CITY_CANVAS_SIZE.height / 8 },
+        buildings,
+        firms,
+        homes,
+        govt: buildings.find((b) => b.type === 'govt'),
+    };
+}
+
+function spawnAgents(config, layout) {
+    const agents = [];
+    const ownerCount = Math.max(1, Math.floor(cityState.numAgents * config.owner_fraction));
+    for (let i = 0; i < cityState.numAgents; i += 1) {
+        const home = layout.homes[i % layout.homes.length];
+        const firm = layout.firms[i % Math.max(1, layout.firms.length)];
+        const isOwner = i < ownerCount;
+        agents.push({
+            id: i,
+            role: isOwner ? CITY_ROLES.OWNER : CITY_ROLES.EMPLOYED,
+            home,
+            firm,
+            x: home.entrance.x + (Math.random() - 0.5) * 10,
+            y: home.entrance.y + (Math.random() - 0.5) * 10,
+            target: firm ? firm.entrance : home.entrance,
+            movingToWork: true,
+            speed: 45 + Math.random() * 20,
+            idleTimer: 0,
+        });
+    }
+    return agents;
+}
+
+function updateAgentRoles(dayStats, dayNumber) {
+    const nonOwners = cityState.agents.filter((a) => a.role !== CITY_ROLES.OWNER);
+    const employedRatio = Math.max(0.02, 1 - dayStats.unemployment_rate);
+    for (let i = 0; i < nonOwners.length; i += 1) {
+        const a = nonOwners[i];
+        const pseudo = ((a.id * 37 + dayNumber * 17) % 1000) / 1000;
+        a.role = pseudo < employedRatio ? CITY_ROLES.EMPLOYED : CITY_ROLES.UNEMPLOYED;
+    }
+}
+
+function chooseAgentTarget(agent, dayStats) {
+    if (!cityState.layout) return;
+    const gdpScale = Math.min(1, dayStats.gdp / 50000);
+    const shouldShop = Math.random() < (0.15 + gdpScale * 0.5);
+
+    if (agent.role === CITY_ROLES.OWNER) {
+        const f = cityState.layout.firms[(agent.id + cityState.currentDay) % cityState.layout.firms.length];
+        agent.target = f ? f.entrance : agent.home.entrance;
+        return;
+    }
+
+    if (agent.role === CITY_ROLES.UNEMPLOYED) {
+        agent.target = Math.random() < 0.55
+            ? cityState.layout.govt.entrance
+            : agent.home.entrance;
+        return;
+    }
+
+    if (shouldShop) {
+        const f = cityState.layout.firms[(agent.id * 3 + cityState.currentDay) % cityState.layout.firms.length];
+        agent.target = f ? f.entrance : agent.home.entrance;
+        return;
+    }
+
+    if (agent.movingToWork) {
+        agent.target = agent.firm ? agent.firm.entrance : agent.home.entrance;
+    } else {
+        agent.target = agent.home.entrance;
+    }
+    agent.movingToWork = !agent.movingToWork;
+}
+
+function updateAgents(dt, dayStats) {
+    for (const agent of cityState.agents) {
+        const dx = agent.target.x - agent.x;
+        const dy = agent.target.y - agent.y;
+        const distance = Math.hypot(dx, dy);
+
+        if (distance < 4) {
+            agent.idleTimer -= dt;
+            if (agent.idleTimer <= 0) {
+                chooseAgentTarget(agent, dayStats);
+                agent.idleTimer = 0.3 + Math.random() * 0.8;
+            }
+            continue;
+        }
+
+        // Move along a simple city-grid style path: x-axis first, then y-axis.
+        const move = agent.speed * dt;
+        if (Math.abs(dx) > 3) {
+            agent.x += Math.sign(dx) * Math.min(Math.abs(dx), move);
+        } else {
+            agent.y += Math.sign(dy) * Math.min(Math.abs(dy), move);
+        }
+    }
+}
+
+function drawCityBackground(ctx) {
+    ctx.fillStyle = '#131826';
+    ctx.fillRect(0, 0, CITY_CANVAS_SIZE.width, CITY_CANVAS_SIZE.height);
+
+    const { cellW, cellH } = cityState.layout.roads;
+    ctx.strokeStyle = '#1d2436';
+    ctx.lineWidth = 22;
+    for (let col = 0; col <= 12; col += 2) {
+        const x = col * cellW;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, CITY_CANVAS_SIZE.height);
+        ctx.stroke();
+    }
+    for (let row = 0; row <= 8; row += 2) {
+        const y = row * cellH;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(CITY_CANVAS_SIZE.width, y);
+        ctx.stroke();
+    }
+}
+
+function drawBuildings(ctx) {
+    for (const b of cityState.layout.buildings.concat(cityState.layout.homes)) {
+        drawBuildingSprite(ctx, b);
+    }
+}
+
+function drawBuildingSprite(ctx, b) {
+    ctx.save();
+    ctx.translate(b.x, b.y);
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.24)';
+    ctx.fillRect(3, b.height + 2, b.width - 6, 4);
+
+    if (b.type === 'home') {
+        ctx.fillStyle = b.color;
+        ctx.fillRect(5, b.height * 0.36, b.width - 10, b.height * 0.54);
+        ctx.fillStyle = '#4f5f86';
+        ctx.beginPath();
+        ctx.moveTo(2, b.height * 0.4);
+        ctx.lineTo(b.width / 2, 4);
+        ctx.lineTo(b.width - 2, b.height * 0.4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#d6deff';
+        ctx.fillRect(b.width * 0.2, b.height * 0.52, 8, 8);
+        ctx.fillRect(b.width * 0.65, b.height * 0.52, 8, 8);
+        ctx.fillStyle = '#2a3555';
+        ctx.fillRect(b.width * 0.45, b.height * 0.63, 10, b.height * 0.27);
+    } else if (b.type === 'park') {
+        ctx.fillStyle = '#2f8052';
+        ctx.fillRect(4, b.height * 0.45, b.width - 8, b.height * 0.45);
+        ctx.fillStyle = '#3fa767';
+        for (let i = 0; i < 3; i += 1) {
+            const x = 10 + i * ((b.width - 20) / 2);
+            ctx.beginPath();
+            ctx.arc(x, b.height * 0.38, 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#325b2f';
+            ctx.fillRect(x - 2, b.height * 0.38, 4, 10);
+            ctx.fillStyle = '#3fa767';
+        }
+    } else if (b.type === 'govt') {
+        ctx.fillStyle = '#6f7c93';
+        ctx.fillRect(4, b.height * 0.3, b.width - 8, b.height * 0.6);
+        ctx.fillStyle = '#95a3be';
+        ctx.beginPath();
+        ctx.moveTo(2, b.height * 0.32);
+        ctx.lineTo(b.width / 2, 4);
+        ctx.lineTo(b.width - 2, b.height * 0.32);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#4d5a72';
+        for (let i = 0; i < 4; i += 1) {
+            const colX = 10 + i * ((b.width - 24) / 3);
+            ctx.fillRect(colX, b.height * 0.42, 5, b.height * 0.4);
+        }
+    } else {
+        ctx.fillStyle = b.color;
+        ctx.fillRect(4, b.height * 0.24, b.width - 8, b.height * 0.66);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.fillRect(4, b.height * 0.24, b.width - 8, 8);
+        ctx.fillStyle = '#f3f5ff';
+        ctx.fillRect(8, b.height * 0.5, b.width - 16, 9);
+        ctx.fillStyle = '#26314f';
+        ctx.fillRect(b.width * 0.43, b.height * 0.62, 12, b.height * 0.28);
+        ctx.fillStyle = '#d5e5ff';
+        for (let i = 0; i < 3; i += 1) {
+            ctx.fillRect(10 + i * 14, b.height * 0.36, 8, 7);
+        }
+    }
+
+    ctx.strokeStyle = '#0f1117';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(1, 1, b.width - 2, b.height - 2);
+
+    const label = b.type === 'home' ? '' : b.label;
+    if (label) {
+        ctx.font = '10px SF Mono, Fira Code, Consolas, monospace';
+        const textW = ctx.measureText(label).width;
+        const lx = (b.width - textW) / 2;
+        const ly = -8;
+        ctx.fillStyle = 'rgba(15, 17, 23, 0.82)';
+        ctx.fillRect(lx - 4, ly - 9, textW + 8, 13);
+        ctx.fillStyle = '#dbe2ff';
+        ctx.fillText(label, lx, ly);
+    }
+    ctx.restore();
+}
+
+function drawAgents(ctx) {
+    for (const a of cityState.agents) {
+        let bodyColor = '#ff7a7a';
+        if (a.role === CITY_ROLES.OWNER) bodyColor = '#ffd35c';
+        else if (a.role === CITY_ROLES.EMPLOYED) bodyColor = '#63d471';
+
+        ctx.fillStyle = '#f2d2b6';
+        ctx.beginPath();
+        ctx.arc(a.x, a.y - 3, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = bodyColor;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y - 1);
+        ctx.lineTo(a.x, a.y + 4);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y + 1);
+        ctx.lineTo(a.x - 2.2, a.y + 3);
+        ctx.moveTo(a.x, a.y + 1);
+        ctx.lineTo(a.x + 2.2, a.y + 3);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y + 4);
+        ctx.lineTo(a.x - 2, a.y + 7);
+        ctx.moveTo(a.x, a.y + 4);
+        ctx.lineTo(a.x + 2, a.y + 7);
+        ctx.stroke();
+
+        if (a.role === CITY_ROLES.OWNER) {
+            ctx.fillStyle = '#fff2a8';
+            ctx.fillRect(a.x - 2, a.y - 7, 4, 1.5);
+        }
+    }
+}
+
+function drawCityLegend(ctx) {
+    const boxX = 12;
+    const boxY = 12;
+    const boxW = 190;
+    const boxH = 70;
+    ctx.fillStyle = 'rgba(12, 15, 24, 0.78)';
+    ctx.fillRect(boxX, boxY, boxW, boxH);
+    ctx.strokeStyle = 'rgba(130, 145, 180, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(boxX, boxY, boxW, boxH);
+
+    ctx.font = '10px SF Mono, Fira Code, Consolas, monospace';
+    ctx.fillStyle = '#dce4ff';
+    ctx.fillText('Agent Legend', boxX + 8, boxY + 14);
+
+    const rows = [
+        { label: 'Employed', color: '#63d471' },
+        { label: 'Unemployed', color: '#ff7a7a' },
+        { label: 'Owners', color: '#ffd35c' },
+    ];
+    rows.forEach((r, idx) => {
+        const y = boxY + 28 + idx * 14;
+        ctx.fillStyle = '#f2d2b6';
+        ctx.beginPath();
+        ctx.arc(boxX + 10, y - 3, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = r.color;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(boxX + 10, y - 1);
+        ctx.lineTo(boxX + 10, y + 4);
+        ctx.stroke();
+        ctx.fillStyle = '#dce4ff';
+        ctx.fillText(r.label, boxX + 20, y + 1);
+    });
+}
+
+function drawDistrictLabels(ctx) {
+    const labels = [
+        { text: 'Commerce', x: 210, y: 22 },
+        { text: 'Industry', x: 20, y: 152 },
+        { text: 'Residential', x: 700, y: 22 },
+    ];
+    ctx.font = '11px SF Mono, Fira Code, Consolas, monospace';
+    for (const l of labels) {
+        const w = ctx.measureText(l.text).width;
+        ctx.fillStyle = 'rgba(15, 17, 23, 0.8)';
+        ctx.fillRect(l.x - 6, l.y - 12, w + 12, 15);
+        ctx.fillStyle = '#9ca9cf';
+        ctx.fillText(l.text, l.x, l.y - 1);
+    }
+}
+
+function renderCityFrame() {
+    if (!cityState.ctx || !cityState.layout) return;
+    const ctx = cityState.ctx;
+    const sx = cityState.canvas.width / CITY_CANVAS_SIZE.width;
+    const sy = cityState.canvas.height / CITY_CANVAS_SIZE.height;
+    const scale = Math.min(sx, sy);
+    const drawW = CITY_CANVAS_SIZE.width * scale;
+    const drawH = CITY_CANVAS_SIZE.height * scale;
+    const offsetX = (cityState.canvas.width - drawW) / 2;
+    const offsetY = (cityState.canvas.height - drawH) / 2;
+
+    ctx.clearRect(0, 0, cityState.canvas.width, cityState.canvas.height);
+    ctx.save();
+    ctx.translate(offsetX, offsetY);
+    ctx.scale(scale, scale);
+    drawCityBackground(ctx);
+    drawBuildings(ctx);
+    drawAgents(ctx);
+    drawDistrictLabels(ctx);
+    drawCityLegend(ctx);
+    ctx.restore();
+}
+
+function updateCityStatsBar(dayStats) {
+    const bar = document.getElementById('city-stats-bar');
+    bar.innerHTML = `
+        <div class="city-stat">GDP<strong>${Math.round(dayStats.gdp).toLocaleString()}</strong></div>
+        <div class="city-stat">Unemployment<strong>${(dayStats.unemployment_rate * 100).toFixed(1)}%</strong></div>
+        <div class="city-stat">Gini<strong>${dayStats.gini_coefficient.toFixed(3)}</strong></div>
+    `;
+    const totalDays = cityState.data.daily_stats.length;
+    document.getElementById('city-day-counter').textContent = `Day ${cityState.currentDay + 1} / ${totalDays}`;
+}
+
+function cityTick(ts) {
+    if (!cityState.data || !cityState.layout) return;
+    if (!cityState.lastTs) cityState.lastTs = ts;
+    const dt = Math.min(0.05, (ts - cityState.lastTs) / 1000);
+    cityState.lastTs = ts;
+
+    const totalDays = cityState.data.daily_stats.length;
+    if (cityState.playing) {
+        const speed = CITY_SPEEDS[cityState.speedIndex];
+        cityState.dayFloat += dt * speed * 0.6;
+        if (cityState.dayFloat >= totalDays - 1) {
+            cityState.dayFloat = totalDays - 1;
+            cityState.playing = false;
+            document.getElementById('city-play-toggle').textContent = 'Play';
+        }
+    }
+
+    const day = Math.floor(cityState.dayFloat);
+    if (day !== cityState.currentDay) {
+        cityState.currentDay = day;
+        cityState.currentStats = cityState.data.daily_stats[day];
+        updateAgentRoles(cityState.currentStats, day + 1);
+        updateCityStatsBar(cityState.currentStats);
+    }
+
+    updateAgents(dt, cityState.currentStats);
+    renderCityFrame();
+    cityState.rafId = requestAnimationFrame(cityTick);
+}
+
+function startCityPlayback(data, resetDay) {
+    ensureCityControls();
+    cityState.data = data;
+    cityState.layout = generateCityLayout(data.config);
+    cityState.agents = spawnAgents(data.config, cityState.layout);
+    cityState.currentDay = 0;
+    cityState.dayFloat = resetDay ? 0 : Math.min(cityState.dayFloat, data.daily_stats.length - 1);
+    cityState.currentStats = data.daily_stats[Math.floor(cityState.dayFloat)] || data.daily_stats[0];
+    cityState.playing = true;
+    document.getElementById('city-play-toggle').textContent = 'Pause';
+    updateAgentRoles(cityState.currentStats, 1);
+    updateCityStatsBar(cityState.currentStats);
+
+    if (cityState.rafId) cancelAnimationFrame(cityState.rafId);
+    cityState.lastTs = 0;
+    cityState.rafId = requestAnimationFrame(cityTick);
+}
+
 async function runSimulation() {
     const btn = document.getElementById('run-btn');
     btn.disabled = true;
@@ -437,6 +1026,7 @@ async function runSimulation() {
         if (scenario === 'baseline') baselineData = data;
 
         renderResults(data);
+        if (activeTab === 'city') startCityPlayback(data, true);
         setStatus(
             `Done — ${data.num_days} days, ${data.final_journal_size} journal entries`,
             'done'
@@ -483,7 +1073,7 @@ async function runComparison() {
             body: JSON.stringify({ config, scenario: 'baseline' }),
         });
         baselineData = await resp.json();
-        renderResults(currentData);
+        renderResults(currentData, activeTab);
         setStatus('Comparison ready — dashed lines show baseline', 'done');
     } catch (e) {
         setStatus('Error: ' + e.message, 'error');
@@ -492,13 +1082,29 @@ async function runComparison() {
     }
 }
 
-function showTab(name) {
+function showTab(name, tabEl = null) {
+    activeTab = name;
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    event.target.classList.add('active');
+    if (tabEl) tabEl.classList.add('active');
+
+    const charts = document.getElementById('charts');
+    const kpis = document.getElementById('kpis');
+    const cityView = document.getElementById('city-view');
+    if (name === 'city') {
+        charts.style.display = 'none';
+        kpis.style.display = 'none';
+        cityView.style.display = 'block';
+        if (currentData) startCityPlayback(currentData, false);
+        return;
+    }
+
+    cityView.style.display = 'none';
+    charts.style.display = '';
+    kpis.style.display = '';
     if (currentData) renderCharts(currentData, name);
 }
 
-function renderResults(data) {
+function renderResults(data, tabToRender = activeTab) {
     document.getElementById('empty-state').style.display = 'none';
     document.getElementById('results').style.display = 'block';
 
@@ -526,7 +1132,11 @@ function renderResults(data) {
         </div>
     `;
 
-    renderCharts(data, 'macro');
+    if (tabToRender === 'city') {
+        showTab('city', document.querySelector('.tab[onclick*="city"]'));
+    } else {
+        renderCharts(data, tabToRender);
+    }
 }
 
 function renderCharts(data, tab) {
@@ -623,6 +1233,12 @@ function renderCharts(data, tab) {
         addChart('Journal Entries / Day', [ts('journal_entries_today', 'Entries', '#8b8fa3')]);
     }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    const speedInput = document.getElementById('city-speed');
+    const speedText = document.getElementById('city-speed-value');
+    speedText.textContent = `${CITY_SPEEDS[+speedInput.value]}x`;
+});
 </script>
 </body>
 </html>
