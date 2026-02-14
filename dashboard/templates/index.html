@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VibeSim — Economic Simulation Engine</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        :root {
+            --bg: #0f1117;
+            --surface: #1a1d27;
+            --border: #2a2d3a;
+            --text: #e1e4ed;
+            --text-dim: #8b8fa3;
+            --accent: #6c8cff;
+            --accent2: #ff6c6c;
+            --accent3: #4ecdc4;
+            --accent4: #ffe66d;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+        }
+        .header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--accent);
+        }
+        .header .subtitle {
+            font-size: 12px;
+            color: var(--text-dim);
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            height: calc(100vh - 60px);
+        }
+        .sidebar {
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            padding: 16px;
+            overflow-y: auto;
+        }
+        .main {
+            padding: 16px;
+            overflow-y: auto;
+        }
+        h2 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        h3 {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-dim);
+            margin: 16px 0 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        label {
+            display: block;
+            font-size: 11px;
+            color: var(--text-dim);
+            margin-bottom: 3px;
+        }
+        input, select {
+            width: 100%;
+            padding: 6px 8px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .param-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background: var(--accent);
+            border: none;
+            border-radius: 6px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.85; }
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        button.secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+        .status {
+            margin-top: 12px;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            text-align: center;
+        }
+        .status.running {
+            background: rgba(108, 140, 255, 0.15);
+            color: var(--accent);
+        }
+        .status.done {
+            background: rgba(78, 205, 196, 0.15);
+            color: var(--accent3);
+        }
+        .status.error {
+            background: rgba(255, 108, 108, 0.15);
+            color: var(--accent2);
+        }
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        .chart-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+        }
+        .chart-card.full-width {
+            grid-column: 1 / -1;
+        }
+        .chart-card h3 {
+            margin: 0 0 8px;
+            color: var(--text);
+        }
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .kpi {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+        .kpi .value {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        .kpi .label {
+            font-size: 10px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .shock-log {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 8px;
+            font-size: 11px;
+            max-height: 100px;
+            overflow-y: auto;
+            margin-top: 8px;
+        }
+        .shock-log div {
+            color: var(--accent4);
+            padding: 2px 0;
+        }
+        .compare-section {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+        .tab-bar {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 16px;
+        }
+        .tab {
+            padding: 6px 16px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-dim);
+            font-size: 12px;
+            cursor: pointer;
+            font-family: inherit;
+            width: auto;
+            font-weight: 400;
+            margin-top: 0;
+        }
+        .tab.active {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+        .accounting-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .badge-ok { background: rgba(78, 205, 196, 0.2); color: var(--accent3); }
+        .badge-fail { background: rgba(255, 108, 108, 0.2); color: var(--accent2); }
+        .empty-state {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 60vh;
+            color: var(--text-dim);
+            font-size: 14px;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .empty-state .icon { font-size: 48px; opacity: 0.3; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>VibeSim</h1>
+            <div class="subtitle">Research-grade macro/micro economic simulation &middot; Double-entry bookkeeping</div>
+        </div>
+        <div>
+            <span class="accounting-badge badge-ok" id="accounting-badge" style="display:none">
+                Accounting Valid
+            </span>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <h2>Parameters</h2>
+
+            <h3>General</h3>
+            <div class="param-row">
+                <div>
+                    <label>Days</label>
+                    <input type="number" id="num_days" value="365" min="30" max="3650">
+                </div>
+                <div>
+                    <label>Seed</label>
+                    <input type="number" id="seed" value="42">
+                </div>
+            </div>
+
+            <h3>Population</h3>
+            <div class="param-row">
+                <div>
+                    <label>Individuals</label>
+                    <input type="number" id="num_individuals" value="500" min="50" max="10000">
+                </div>
+                <div>
+                    <label>Owner %</label>
+                    <input type="number" id="owner_fraction" value="0.01" step="0.01" min="0.005" max="0.2">
+                </div>
+            </div>
+
+            <h3>Firms</h3>
+            <div class="param-row">
+                <div>
+                    <label>Food</label>
+                    <input type="number" id="num_food_firms" value="4" min="1" max="20">
+                </div>
+                <div>
+                    <label>Energy</label>
+                    <input type="number" id="num_energy_firms" value="3" min="1" max="20">
+                </div>
+            </div>
+            <div class="param-row">
+                <div>
+                    <label>Shelter</label>
+                    <input type="number" id="num_shelter_firms" value="3" min="1" max="20">
+                </div>
+                <div>
+                    <label>Init Wage</label>
+                    <input type="number" id="initial_wage" value="80" min="10" max="500">
+                </div>
+            </div>
+
+            <h3>Government</h3>
+            <div class="param-row">
+                <div>
+                    <label>Income Tax</label>
+                    <input type="number" id="income_tax_rate" value="0.20" step="0.01" min="0" max="0.8">
+                </div>
+                <div>
+                    <label>Sales Tax</label>
+                    <input type="number" id="sales_tax_rate" value="0.05" step="0.01" min="0" max="0.5">
+                </div>
+            </div>
+            <div class="param-row">
+                <div>
+                    <label>Transfers/day</label>
+                    <input type="number" id="daily_govt_transfer" value="10" min="0" max="200">
+                </div>
+                <div>
+                    <label>Spending/day</label>
+                    <input type="number" id="daily_govt_spending" value="5000" min="0" max="100000">
+                </div>
+            </div>
+
+            <h3>Scenario Shock</h3>
+            <select id="scenario">
+                <option value="baseline">Baseline (no shocks)</option>
+                <option value="stimulus">Stimulus spending (+10k/day at d90)</option>
+                <option value="austerity">Austerity (-50% at d90)</option>
+                <option value="tax_reform">Tax reform (10% at d90)</option>
+                <option value="tech_boom">Tech boom (food 2x, energy 1.5x at d90)</option>
+                <option value="energy_crisis">Energy crisis (60% drop at d90)</option>
+                <option value="stagflation">Stagflation (crisis + stimulus)</option>
+            </select>
+
+            <button id="run-btn" onclick="runSimulation()">Run Simulation</button>
+            <button class="secondary" id="compare-btn" onclick="runComparison()" disabled>
+                Compare with Baseline
+            </button>
+
+            <div id="status" class="status" style="display:none"></div>
+
+            <div class="compare-section">
+                <h3>Shock Log</h3>
+                <div id="shock-log" class="shock-log">
+                    <div style="color: var(--text-dim)">No shocks applied</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main" id="main-area">
+            <div class="empty-state" id="empty-state">
+                <div class="icon">&#x2699;</div>
+                <div>Configure parameters and run a simulation</div>
+                <div style="font-size:11px">The engine uses double-entry bookkeeping. Every dollar is tracked.</div>
+            </div>
+            <div id="results" style="display:none">
+                <div class="tab-bar">
+                    <button class="tab active" onclick="showTab('macro')">Macro</button>
+                    <button class="tab" onclick="showTab('prices')">Prices</button>
+                    <button class="tab" onclick="showTab('distribution')">Distribution</button>
+                    <button class="tab" onclick="showTab('sectors')">Sector Balances</button>
+                    <button class="tab" onclick="showTab('production')">Production</button>
+                </div>
+
+                <div class="kpi-grid" id="kpis"></div>
+                <div class="charts-grid" id="charts"></div>
+            </div>
+        </div>
+    </div>
+
+<script>
+const PLOTLY_LAYOUT = {
+    paper_bgcolor: '#1a1d27',
+    plot_bgcolor: '#1a1d27',
+    font: { color: '#e1e4ed', family: 'SF Mono, Fira Code, Consolas, monospace', size: 10 },
+    margin: { t: 30, r: 20, b: 40, l: 50 },
+    xaxis: { gridcolor: '#2a2d3a', zerolinecolor: '#2a2d3a' },
+    yaxis: { gridcolor: '#2a2d3a', zerolinecolor: '#2a2d3a' },
+    legend: { orientation: 'h', y: -0.15 },
+    height: 280,
+};
+
+let currentData = null;
+let baselineData = null;
+
+function getConfig() {
+    return {
+        num_days: +document.getElementById('num_days').value,
+        seed: +document.getElementById('seed').value,
+        num_individuals: +document.getElementById('num_individuals').value,
+        owner_fraction: +document.getElementById('owner_fraction').value,
+        num_food_firms: +document.getElementById('num_food_firms').value,
+        num_energy_firms: +document.getElementById('num_energy_firms').value,
+        num_shelter_firms: +document.getElementById('num_shelter_firms').value,
+        initial_wage: +document.getElementById('initial_wage').value,
+        income_tax_rate: +document.getElementById('income_tax_rate').value,
+        sales_tax_rate: +document.getElementById('sales_tax_rate').value,
+        daily_govt_transfer: +document.getElementById('daily_govt_transfer').value,
+        daily_govt_spending: +document.getElementById('daily_govt_spending').value,
+    };
+}
+
+function setStatus(msg, type) {
+    const el = document.getElementById('status');
+    el.style.display = 'block';
+    el.className = 'status ' + type;
+    el.textContent = msg;
+}
+
+async function runSimulation() {
+    const btn = document.getElementById('run-btn');
+    btn.disabled = true;
+    setStatus('Running simulation...', 'running');
+
+    const scenario = document.getElementById('scenario').value;
+    const config = getConfig();
+
+    try {
+        const resp = await fetch('/api/run', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ config, scenario }),
+        });
+        const data = await resp.json();
+        currentData = data;
+        if (scenario === 'baseline') baselineData = data;
+
+        renderResults(data);
+        setStatus(
+            `Done — ${data.num_days} days, ${data.final_journal_size} journal entries`,
+            'done'
+        );
+
+        // Update shock log
+        const logEl = document.getElementById('shock-log');
+        if (data.shock_log && data.shock_log.length > 0) {
+            logEl.innerHTML = data.shock_log.map(s => `<div>${s}</div>`).join('');
+        } else {
+            logEl.innerHTML = '<div style="color: var(--text-dim)">No shocks applied</div>';
+        }
+
+        // Update accounting badge
+        const badge = document.getElementById('accounting-badge');
+        badge.style.display = 'inline-block';
+        if (data.accounting_valid) {
+            badge.className = 'accounting-badge badge-ok';
+            badge.textContent = 'Accounting Valid';
+        } else {
+            badge.className = 'accounting-badge badge-fail';
+            badge.textContent = 'Accounting Error!';
+        }
+
+        document.getElementById('compare-btn').disabled = (scenario === 'baseline' && !baselineData);
+    } catch (e) {
+        setStatus('Error: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function runComparison() {
+    // Run baseline with same config
+    const config = getConfig();
+    const btn = document.getElementById('compare-btn');
+    btn.disabled = true;
+    setStatus('Running baseline for comparison...', 'running');
+
+    try {
+        const resp = await fetch('/api/run', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ config, scenario: 'baseline' }),
+        });
+        baselineData = await resp.json();
+        renderResults(currentData);
+        setStatus('Comparison ready — dashed lines show baseline', 'done');
+    } catch (e) {
+        setStatus('Error: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function showTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    if (currentData) renderCharts(currentData, name);
+}
+
+function renderResults(data) {
+    document.getElementById('empty-state').style.display = 'none';
+    document.getElementById('results').style.display = 'block';
+
+    const stats = data.daily_stats;
+    const last = stats[stats.length - 1];
+
+    // KPIs
+    const kpis = document.getElementById('kpis');
+    kpis.innerHTML = `
+        <div class="kpi">
+            <div class="value">${last.gdp.toFixed(0)}</div>
+            <div class="label">Daily GDP</div>
+        </div>
+        <div class="kpi">
+            <div class="value">${(last.unemployment_rate * 100).toFixed(1)}%</div>
+            <div class="label">Unemployment</div>
+        </div>
+        <div class="kpi">
+            <div class="value">${last.avg_wage.toFixed(1)}</div>
+            <div class="label">Avg Wage</div>
+        </div>
+        <div class="kpi">
+            <div class="value">${last.gini_coefficient.toFixed(3)}</div>
+            <div class="label">Gini Index</div>
+        </div>
+    `;
+
+    renderCharts(data, 'macro');
+}
+
+function renderCharts(data, tab) {
+    const container = document.getElementById('charts');
+    container.innerHTML = '';
+
+    const stats = data.daily_stats;
+    const days = stats.map(s => s.day);
+
+    const baseStats = (baselineData && baselineData !== data) ? baselineData.daily_stats : null;
+    const baseDays = baseStats ? baseStats.map(s => s.day) : null;
+
+    function addChart(title, traces, fullWidth) {
+        const div = document.createElement('div');
+        div.className = 'chart-card' + (fullWidth ? ' full-width' : '');
+        div.innerHTML = `<h3>${title}</h3><div></div>`;
+        container.appendChild(div);
+        const chartDiv = div.querySelector('div:last-child');
+
+        // Add baseline comparison traces
+        if (baseStats && baseDays) {
+            const baseTraces = [];
+            for (const t of traces) {
+                const fieldName = t._field;
+                if (fieldName) {
+                    baseTraces.push({
+                        x: baseDays,
+                        y: baseStats.map(s => s[fieldName]),
+                        name: t.name + ' (baseline)',
+                        line: { dash: 'dash', width: 1, color: t.line?.color || '#555' },
+                        showlegend: false,
+                    });
+                }
+            }
+            traces = [...baseTraces, ...traces];
+        }
+
+        Plotly.newPlot(chartDiv, traces, {
+            ...PLOTLY_LAYOUT,
+            title: { text: title, font: { size: 12 } },
+        }, { responsive: true, displayModeBar: false });
+    }
+
+    function ts(field, name, color) {
+        return {
+            x: days, y: stats.map(s => s[field]),
+            name, line: { color, width: 2 },
+            _field: field,
+        };
+    }
+
+    if (tab === 'macro') {
+        addChart('Daily GDP', [ts('gdp', 'GDP', '#6c8cff')]);
+        addChart('Unemployment Rate', [ts('unemployment_rate', 'Unemployment', '#ff6c6c')]);
+        addChart('Average Wage', [ts('avg_wage', 'Wage', '#4ecdc4')]);
+        addChart('Money Supply (Bank Deposits)', [ts('total_money_supply', 'M1', '#ffe66d')]);
+    } else if (tab === 'prices') {
+        addChart('Food Price', [ts('food_price', 'Food', '#ff6c6c')]);
+        addChart('Energy Price', [ts('energy_price', 'Energy', '#ffe66d')]);
+        addChart('Shelter Price', [ts('shelter_price', 'Shelter', '#4ecdc4')]);
+        addChart('All Prices', [
+            ts('food_price', 'Food', '#ff6c6c'),
+            ts('energy_price', 'Energy', '#ffe66d'),
+            ts('shelter_price', 'Shelter', '#4ecdc4'),
+        ], true);
+    } else if (tab === 'distribution') {
+        addChart('Gini Coefficient', [ts('gini_coefficient', 'Gini', '#ff6c6c')]);
+        addChart('Median vs Mean Cash', [
+            ts('median_cash', 'Median', '#4ecdc4'),
+            ts('mean_cash', 'Mean', '#ffe66d'),
+        ]);
+        addChart('Top 1% Income Share', [ts('top1_pct_income_share', 'Top 1%', '#ff6c6c')]);
+        addChart('Bottom 50% Income Share', [ts('bottom50_pct_income_share', 'Bottom 50%', '#4ecdc4')]);
+    } else if (tab === 'sectors') {
+        addChart('Government Deficit (daily)', [ts('govt_deficit', 'Deficit', '#ff6c6c')]);
+        addChart('Sector Balances', [
+            ts('private_sector_balance', 'Private', '#4ecdc4'),
+            ts('govt_sector_balance', 'Government', '#ff6c6c'),
+            ts('bank_sector_balance', 'Banking', '#ffe66d'),
+        ], true);
+    } else if (tab === 'production') {
+        addChart('Food', [
+            ts('food_produced', 'Produced', '#6c8cff'),
+            ts('food_sold', 'Sold', '#ff6c6c'),
+        ]);
+        addChart('Energy', [
+            ts('energy_produced', 'Produced', '#6c8cff'),
+            ts('energy_sold', 'Sold', '#ffe66d'),
+        ]);
+        addChart('Shelter', [
+            ts('shelter_produced', 'Produced', '#6c8cff'),
+            ts('shelter_sold', 'Sold', '#4ecdc4'),
+        ]);
+        addChart('Journal Entries / Day', [ts('journal_entries_today', 'Entries', '#8b8fa3')]);
+    }
+}
+</script>
+</body>
+</html>
