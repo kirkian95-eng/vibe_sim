@@ -7,9 +7,8 @@ all required invariants throughout the simulation.
 
 import pytest
 
-from engine.config import SimConfig
-from engine.ledger import AccountType, Ledger
-from engine.simulation import Simulation
+from engine import SimConfig, Simulation
+from engine.ledger import AccountType, Ledger, LedgerError
 
 
 def test_basic_ledger_creation():
@@ -41,7 +40,7 @@ def test_unbalanced_entry_rejected():
     ledger.create_account("a", "cash", AccountType.ASSET)
     ledger.create_account("b", "cash", AccountType.ASSET)
 
-    with pytest.raises(Exception):
+    with pytest.raises(LedgerError):
         ledger.post(0, "Unbalanced", [("a:cash", 100, 0), ("b:cash", 0, 50)])
 
 

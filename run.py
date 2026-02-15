@@ -22,9 +22,8 @@ def run_dashboard():
 
 def run_demo():
     """Run a demo simulation and print results."""
-    from engine.config import SimConfig
+    from engine import SimConfig, Simulation
     from engine.shocks import SCENARIOS
-    from engine.simulation import Simulation
 
     print("=" * 70)
     print("VibeSim Demo — Baseline vs Stimulus Comparison")

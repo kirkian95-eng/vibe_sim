@@ -7,9 +7,6 @@ production function:  output = productivity * labor^alpha * capital^beta
 
 from __future__ import annotations
 
-import math
-from typing import Dict
-
 
 def cobb_douglas(
     productivity: float,
@@ -25,7 +22,7 @@ def cobb_douglas(
     """
     if labor <= 0 or capital <= 0:
         return 0.0
-    return productivity * (labor ** labor_share) * (capital ** capital_share)
+    return float(productivity * (labor ** labor_share) * (capital ** capital_share))
 
 
 def desired_labor(
@@ -42,7 +39,7 @@ def desired_labor(
     if capital_factor <= 0:
         return 0.0
     raw = target_output / capital_factor
-    return raw ** (1.0 / labor_share)
+    return float(raw ** (1.0 / labor_share))
 
 
 def firm_target_output(

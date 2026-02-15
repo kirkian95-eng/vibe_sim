@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install ruff mypy
+      - run: ruff check engine/ tests/
+      - run: mypy engine/ --ignore-missing-imports
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          pip install -e ".[dev]"
+      - name: Run tests
+        run: pytest -v -m "not slow" tests/
+
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+      - name: Smoke test
+        run: pytest -v -m smoke tests/
+      - name: Run short demo simulation
+        run: |
+          python -c "
+          from engine import SimConfig, Simulation
+          sim = Simulation(SimConfig(num_days=30, seed=42, num_individuals=200))
+          results = sim.run()
+          assert results[-1].gdp > 0
+          assert sim.ledger.check_all_entries_balanced()
+          assert sim.ledger.check_system_balance()
+          print(f'Smoke sim OK: GDP={results[-1].gdp:.0f}, entries={sim.ledger.journal_size}')
+          "

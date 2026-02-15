@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import dataclasses as dc
 from enum import Enum
-from typing import Dict, List, Optional
 
 from .ledger import AccountType, Ledger
 
@@ -48,9 +47,9 @@ class Individual(Actor):
     """A person who works, consumes, and may own firms."""
 
     employed: bool = False
-    employer_id: Optional[str] = None
+    employer_id: str | None = None
     is_owner: bool = False
-    owned_firm_id: Optional[str] = None
+    owned_firm_id: str | None = None
 
     @staticmethod
     def create(ledger: Ledger, idx: int, is_owner: bool = False) -> Individual:
@@ -80,7 +79,7 @@ class Firm(Actor):
     """A firm that produces one type of good."""
 
     good_type: GoodType = GoodType.FOOD
-    owner_id: Optional[str] = None
+    owner_id: str | None = None
     num_workers: int = 0
     wage_offer: float = 80.0
     price: float = 5.0
@@ -175,7 +174,7 @@ def create_all_actors(
     num_energy_firms: int,
     num_shelter_firms: int,
     num_owners: int,
-    initial_prices: Dict[str, float],
+    initial_prices: dict[str, float],
     initial_wage: float,
 ) -> dict:
     """
@@ -189,7 +188,7 @@ def create_all_actors(
     bank = Bank.create(ledger)
 
     # Firms
-    firms: List[Firm] = []
+    firms: list[Firm] = []
     firm_idx = 0
     for good, count in [
         (GoodType.FOOD, num_food_firms),
@@ -204,7 +203,7 @@ def create_all_actors(
             firm_idx += 1
 
     # Individuals
-    individuals: List[Individual] = []
+    individuals: list[Individual] = []
     for i in range(num_individuals):
         is_owner = i < num_owners
         ind = Individual.create(ledger, i, is_owner=is_owner)

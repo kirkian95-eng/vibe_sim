@@ -1,14 +1,14 @@
 """
-Simulation configuration — all tuneable parameters in one place.
+Simulation configuration -- all tuneable parameters in one place.
 
 A SimConfig is a frozen snapshot; shocks produce a new config for
-the affected day range.
+the affected day range.  Configs can be loaded from YAML via
+``engine.io.load_config_yaml``.
 """
 
 from __future__ import annotations
 
 import dataclasses as dc
-from typing import Dict
 
 
 @dc.dataclass
@@ -88,21 +88,21 @@ class SimConfig:
     def daily_interest_rate(self) -> float:
         return self.interest_rate / 365.0
 
-    def initial_prices(self) -> Dict[str, float]:
+    def initial_prices(self) -> dict[str, float]:
         return {
             "food": self.initial_food_price,
             "energy": self.initial_energy_price,
             "shelter": self.initial_shelter_price,
         }
 
-    def productivity(self) -> Dict[str, float]:
+    def productivity(self) -> dict[str, float]:
         return {
             "food": self.food_productivity,
             "energy": self.energy_productivity,
             "shelter": self.shelter_productivity,
         }
 
-    def consumption_needs(self) -> Dict[str, float]:
+    def consumption_needs(self) -> dict[str, float]:
         return {
             "food": self.food_need,
             "energy": self.energy_need,
