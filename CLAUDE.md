@@ -4,10 +4,9 @@
 
 - **Max 50 agents** when running simulations for testing or debugging. Never use 200, 300, or 1000 agents unless the user specifically requests it.
 - **Max 90 days** for test simulations unless the user specifically asks for longer runs.
-- **Run targeted tests**, not the full suite. If you changed `markets.py`, run `test_accounting.py` and `test_smoke.py` — not every test file.
+- **After making changes, run `pytest -m smoke` only.** That is 3 tests and takes under 1 second. Do not run the full suite, do not run `test_economics.py`, `test_invariants.py`, or `test_properties.py` unless the user explicitly asks.
 - **Never run `test_economics.py` in a loop** trying to tune default parameters. Those tests check that the model responds directionally to shocks. If they fail, fix the model code, not the test thresholds.
-- **Avoid running property-based tests** (hypothesis) during iterative development. They are slow. Run them once before committing.
-- **One quick smoke test** (`pytest -m smoke`) is enough to verify basic correctness after most changes.
+- **Avoid running property-based tests** (hypothesis) during iterative development. They are slow. Run them once before committing only if asked.
 
 ## What Matters
 
