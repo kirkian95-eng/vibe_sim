@@ -163,6 +163,54 @@ def post_sales_tax(
     post_tax_payment(ledger, month, govt, bank, firm.id, amount, f"Sales tax: {firm.id}")
 
 
+def post_shelter_purchase_from_govt(
+    ledger: Ledger,
+    month: int,
+    ind: Individual,
+    bank: Bank,
+    govt: Government,
+    quantity: float,
+    price_per_unit: float,
+) -> None:
+    """
+    Individual buys shelter from government (infinite supply, fixed price).
+
+    TRADEOFF: Shelter is temporarily an infinitely-available good at fixed price.
+    Payments go to government (money destroyed like tax). To revert to market-based
+    shelter with supply-constrained firms, remove this path and restore the shelter
+    firm loop in clear_goods_market (markets.py).
+    """
+    total = quantity * price_per_unit
+    if total <= 0 or quantity <= 0:
+        return
+
+    diff = total - quantity
+    if diff >= 0:
+        buyer_lines = [
+            (f"{ind.id}:inventory:shelter", quantity, 0),
+            (f"{ind.id}:cash", 0, total),
+            (f"{ind.id}:equity", diff, 0),
+        ]
+    else:
+        buyer_lines = [
+            (f"{ind.id}:inventory:shelter", quantity, 0),
+            (f"{ind.id}:cash", 0, total),
+            (f"{ind.id}:equity", 0, -diff),
+        ]
+    # Money destruction (like tax): govt receives payment, money supply shrinks
+    buyer_lines.extend([
+        (f"{bank.id}:deposits", total, 0),
+        (f"{bank.id}:reserves", 0, total),
+        (f"{govt.id}:currency_issued", total, 0),
+        (f"{govt.id}:shelter_revenue", 0, total),
+    ])
+    ledger.post(
+        month,
+        f"Shelter (govt): {ind.id} buys {quantity:.1f} @ {price_per_unit:.0f}",
+        buyer_lines,
+    )
+
+
 def post_profit_distribution(
     ledger: Ledger,
     month: int,

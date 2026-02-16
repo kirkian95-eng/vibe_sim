@@ -47,7 +47,8 @@ class SimConfig:
     initial_firm_cash: float = 50_000.0
     initial_firm_capital: float = 100.0
     initial_firm_inventory: float = 50.0
-    initial_individual_cash: float = 500.0
+    initial_individual_cash: float = 500.0  # flat fallback; overridden by age-based
+    initial_savings_at_retirement: float = 40_000.0  # target bank deposits at age 65
     initial_bank_reserves: float = 500_000.0
 
     # ── Consumption (units per adult per month) ─────────────────────
@@ -60,6 +61,8 @@ class SimConfig:
     initial_food_price: float = 150.0
     initial_energy_price: float = 120.0
     initial_shelter_price: float = 600.0
+    # Shelter: temporarily fixed-price govt provision (see markets.py TRADEOFF)
+    shelter_fixed_price: float = 600.0
 
     # ── Wages (monthly) ─────────────────────────────────────────────
     initial_wage: float = 2400.0

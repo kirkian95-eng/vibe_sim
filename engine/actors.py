@@ -206,6 +206,7 @@ class Government(Actor):
         ledger.create_account(actor_id, "equity", AccountType.EQUITY)
         # Income statement
         ledger.create_account(actor_id, "tax_revenue", AccountType.REVENUE)
+        ledger.create_account(actor_id, "shelter_revenue", AccountType.REVENUE)
         ledger.create_account(actor_id, "spending_expense", AccountType.EXPENSE)
         ledger.create_account(actor_id, "transfer_expense", AccountType.EXPENSE)
         ledger.create_account(actor_id, "interest_expense", AccountType.EXPENSE)
