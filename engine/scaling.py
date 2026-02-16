@@ -55,6 +55,8 @@ def scaled_firm_endowments(
     Per-firm cash, capital, inventory. All scale with demand so ratios stay constant.
 
     - firm_cash: months_of_payroll * (workers_per_firm) * wage
+      Use ALL firms (including healthcare) in workers_per_firm so each firm
+      can afford to hire its share; otherwise goods firms exhaust the pool.
     - firm_capital: demand_per_firm * capital_per_unit (Cobb-Douglas intensity)
     - firm_inventory: demand_per_firm * target_inventory_months
     """
@@ -63,7 +65,8 @@ def scaled_firm_endowments(
     # Workers ≈ 64% of population (adults - owners)
     labor_force = n * 0.64
     num_goods_firms = counts["food"] + counts["energy"] + counts["shelter"]
-    workers_per_firm = labor_force / max(1, num_goods_firms)
+    num_all_firms = num_goods_firms + counts["healthcare"]
+    workers_per_firm = labor_force / max(1, num_all_firms)
 
     # Per-firm cash: enough for 2.5 months of payroll (cold start)
     months_payroll = 2.5

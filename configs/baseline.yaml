@@ -15,9 +15,9 @@ num_energy_firms: 3
 num_shelter_firms: 0  # govt provides shelter
 num_healthcare_firms: 2
 
-# Production (Cobb-Douglas) - food/energy boosted to meet consumption
-food_productivity: 6.0
-energy_productivity: 5.0
+# Production (Cobb-Douglas) - calibrated for stable supply/demand balance
+food_productivity: 5.0
+energy_productivity: 4.0
 shelter_productivity: 0.8
 healthcare_productivity: 5.0
 labor_share: 0.7
@@ -37,9 +37,9 @@ energy_need: 1.0
 shelter_need: 1.0
 child_food_fraction: 0.5
 
-# Initial prices (per unit)
-initial_food_price: 150.0
-initial_energy_price: 120.0
+# Initial prices (per unit) - near equilibrium to avoid spikes/collapses
+initial_food_price: 25.0
+initial_energy_price: 20.0
 initial_shelter_price: 600.0
 # Shelter: temporarily govt-provided at fixed price (see markets.py TRADEOFF)
 shelter_fixed_price: 720.0  # ~30% of initial wage
@@ -50,7 +50,7 @@ min_wage: 600.0
 wage_adjustment_speed: 0.06
 
 # Price adjustment
-price_adjustment_speed: 0.10
+price_adjustment_speed: 0.06  # slower for stability
 target_inventory_months: 2.0
 
 # Government / fiscal

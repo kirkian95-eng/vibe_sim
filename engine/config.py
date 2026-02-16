@@ -36,9 +36,9 @@ class SimConfig:
     num_healthcare_firms: int = 2
 
     # ── Production (Cobb-Douglas) ─────────────────────────────────
-    # Food/energy boosted so supply can meet consumption (reduces price volatility)
-    food_productivity: float = 6.0
-    energy_productivity: float = 5.0
+    # Calibrated so full employment produces ~1.2x demand (stable prices)
+    food_productivity: float = 5.0
+    energy_productivity: float = 4.0
     shelter_productivity: float = 0.8
     healthcare_productivity: float = 5.0  # visits per worker per month
     labor_share: float = 0.7
@@ -59,10 +59,12 @@ class SimConfig:
     child_food_fraction: float = 0.5  # children consume 50% of adult food
 
     # ── Prices (initial, per unit) ──────────────────────────────────
-    initial_food_price: float = 150.0
-    initial_energy_price: float = 120.0
+    # Start near equilibrium (~cost-based) to avoid price spikes/collapses
+    initial_food_price: float = 25.0
+    initial_energy_price: float = 20.0
     initial_shelter_price: float = 600.0
     # Shelter: fixed-price govt provision, ~30% of monthly wage (see markets.py TRADEOFF)
+    # Set to 1 for effectively free shelter (minimal money destruction)
     shelter_fixed_price: float = 720.0  # 0.3 * initial_wage
 
     # ── Wages (monthly) ─────────────────────────────────────────────
@@ -71,7 +73,7 @@ class SimConfig:
     wage_adjustment_speed: float = 0.06  # fraction per month
 
     # ── Price adjustment ────────────────────────────────────────────
-    price_adjustment_speed: float = 0.10  # fraction per month
+    price_adjustment_speed: float = 0.06  # slower = more stable
     target_inventory_months: float = 2.0  # months of sales to keep
 
     # ── Government / fiscal ─────────────────────────────────────────

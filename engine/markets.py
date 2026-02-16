@@ -144,6 +144,14 @@ def clear_labor_market(
     # Shelter firms excluded when govt provides shelter (see TRADEOFF in clear_goods_market)
     productivities = config.productivity()
     labor_demands: list[tuple[Firm, int]] = []
+    hc_firms = [f for f in firms if f.is_healthcare]
+    num_hc = len(hc_firms)
+    workers_pool = len([
+        i for i in individuals
+        if i.alive and i.life_stage == LifeStage.ADULT and not i.is_owner
+    ])
+    workers_per_firm_cap = max(1, workers_pool // (len([f for f in firms if f.good_type != GoodType.SHELTER]) + 1))
+
     for firm in firms:
         if firm.good_type == GoodType.SHELTER:
             continue  # govt provides shelter; don't waste labor
@@ -151,10 +159,9 @@ def clear_labor_market(
             # Cap healthcare hiring to match demand (elder visits)
             retirees = sum(1 for i in individuals if i.alive and i.life_stage == LifeStage.RETIRED)
             workers_needed = max(1, (retirees + config.healthcare_productivity - 1) // config.healthcare_productivity)
-            per_firm = max(1, (workers_needed + len([f for f in firms if f.is_healthcare]) - 1) // len([f for f in firms if f.is_healthcare]))
+            per_firm = max(1, (workers_needed + num_hc - 1) // num_hc) if num_hc else 1
             cash = ledger.account_balance(f"{firm.id}:cash")
-            wanted = max(0, int(cash / max(firm.wage_offer, 1.0)))
-            wanted = min(wanted, per_firm)  # cap to demand, not 50
+            wanted = max(1, min(int(cash / max(firm.wage_offer, 1.0)), per_firm))
         else:
             inventory = ledger.account_balance(f"{firm.id}:inventory")
             # Demand-driven target: expected sales = consumption demand / firms producing this good
@@ -188,7 +195,9 @@ def clear_labor_market(
             )
             cash = ledger.account_balance(f"{firm.id}:cash")
             max_affordable = max(0, int(cash / max(firm.wage_offer, 1.0)))
-            wanted = min(max(int(labor_needed) + 1, 1), max_affordable)
+            raw_wanted = min(max(int(labor_needed) + 1, 1), max_affordable)
+            # Cap so healthcare gets headroom; ~1.2x fair share leaves workers for healthcare
+            wanted = min(raw_wanted, max(1, int(workers_per_firm_cap * 1.2)))
 
         if wanted > 0:
             labor_demands.append((firm, wanted))
@@ -202,8 +211,12 @@ def clear_labor_market(
     ]
     rng.shuffle(workers)
 
-    # Sort firms by wage offer (higher wages attract first)
-    labor_demands.sort(key=lambda x: x[0].wage_offer, reverse=True)
+    # Sort firms: healthcare first (priority for elder care), then by wage (higher attracts first)
+    def _labor_sort_key(item: tuple) -> tuple:
+        f = item[0]
+        return (0 if f.is_healthcare else 1, -f.wage_offer)
+
+    labor_demands.sort(key=_labor_sort_key)
 
     worker_idx = 0
     total_hired = 0

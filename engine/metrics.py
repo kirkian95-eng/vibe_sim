@@ -176,12 +176,18 @@ def collect_monthly_stats(
     sales_tax = goods_stats.get("total_sales_tax", 0.0)
     income_tax = govt_stats.get("total_tax_collected", 0.0)
     transfers = govt_stats.get("transfers_to_households", 0.0)
+    pensions = pension_stats.get("total_pensions", 0.0)
+    healthcare_spending = hc_stats.get("healthcare_govt_spending", 0.0)
     cap_consumption = goods_stats.get("capitalist_consumption", 0.0)
     wkr_consumption = goods_stats.get("worker_consumption", 0.0)
 
     aggregate_profits = (consumer_spending + govt_purchases) - (total_wages_paid + sales_tax)
     worker_saving = total_wages_paid + transfers - income_tax - wkr_consumption
-    full_govt_deficit = (govt_purchases + transfers) - (income_tax + sales_tax)
+    # Full deficit: all money-creating flows minus all money-destroying flows
+    full_govt_deficit = (
+        (govt_purchases + transfers + pensions + healthcare_spending)
+        - (income_tax + sales_tax)
+    )
 
     investment = 0.0
     kalecki_residual = aggregate_profits - (investment + full_govt_deficit + cap_consumption - worker_saving)
