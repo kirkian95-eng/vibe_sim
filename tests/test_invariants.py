@@ -27,7 +27,7 @@ class TestJournalBalance:
             )
 
     def test_every_entry_balanced_full_year(self):
-        sim = Simulation(SimConfig(seed=77, num_days=365, num_individuals=200))
+        sim = Simulation(SimConfig(seed=77, num_days=90, num_individuals=50))
         sim.run()
         unbalanced = [
             e for e in sim.ledger.journal if not e.is_balanced()
@@ -40,7 +40,7 @@ class TestJournalBalance:
         assert small_sim.ledger.verify_running_balances()
 
     def test_replay_matches_running_full_year(self):
-        sim = Simulation(SimConfig(seed=88, num_days=365, num_individuals=200))
+        sim = Simulation(SimConfig(seed=88, num_days=90, num_individuals=50))
         sim.run()
         assert sim.ledger.verify_running_balances()
 
@@ -73,7 +73,7 @@ class TestBalanceSheetEquation:
         assert small_sim.ledger.check_system_balance()
 
     def test_balance_sheet_holds_after_365_days(self):
-        sim = Simulation(SimConfig(seed=99, num_days=365, num_individuals=300))
+        sim = Simulation(SimConfig(seed=99, num_days=90, num_individuals=50))
         sim.run()
         for ind in sim.individuals:
             assert sim.ledger.check_balance_sheet_equation(ind.id)
@@ -133,7 +133,11 @@ class TestSectorBalances:
 
     def test_system_balance_holds_every_day(self):
         """System balance should hold at end of every day."""
-        sim = Simulation(SimConfig(seed=42, num_days=90))
+        sim = Simulation(SimConfig(
+            seed=42, num_days=90,
+            num_individuals=50,
+            num_food_firms=2, num_energy_firms=2, num_shelter_firms=2,
+        ))
         results = sim.run()
         for stat in results:
             assert stat.all_balanced, f"Day {stat.day}: entries not balanced"

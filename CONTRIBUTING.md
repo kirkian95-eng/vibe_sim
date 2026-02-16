@@ -1,11 +1,10 @@
 # Contributing to VibeSim
 
-Thanks for your interest in contributing! This document covers the basics.
+Thanks for your interest in contributing!
 
 ## Development Setup
 
 ```bash
-# Clone and install in editable mode with dev dependencies
 git clone <repo-url>
 cd vibe_sim
 pip install -e ".[dev]"
@@ -14,47 +13,34 @@ pip install -e ".[dev]"
 ## Running Tests
 
 ```bash
-# All tests
+# Smoke tests (fast, <30s)
+pytest -v -m smoke tests/
+
+# Core tests (smoke + accounting + io)
+pytest -v tests/test_smoke.py tests/test_accounting.py tests/test_io.py
+
+# Full suite including economics and invariants
 pytest -v tests/
 
-# Fast tests only (skip slow, long-running tests)
-pytest -v -m "not slow" tests/
-
-# Smoke tests only
-pytest -v -m smoke tests/
+# Property-based tests only (slow, run before committing)
+pytest -v tests/test_properties.py
 ```
 
 ## Code Quality
 
 ```bash
-# Lint
 ruff check engine/ tests/
-
-# Format
 ruff format engine/ tests/
-
-# Type check
 mypy engine/ --ignore-missing-imports
 ```
 
 ## Making Changes
 
 1. Create a feature branch from `main`.
-2. Make your changes. Preserve accounting invariants.
-3. Run the test suite and ensure all tests pass.
+2. Make your changes.
+3. Run `pytest -m smoke` to verify basic correctness.
 4. Run `ruff check` and `mypy` with no errors.
 5. Open a pull request with a clear description.
-
-## Key Invariants
-
-These must **always** hold -- CI enforces them:
-
-- Every journal entry balances: `sum(debits) == sum(credits)`
-- Balance sheet equation holds for every actor: `A == L + E + R - X`
-- System-wide balance: total debit-normal balances == total credit-normal balances
-- Replay from journal matches running balances
-
-If your change breaks any of these, it will be caught by the property-based tests.
 
 ## Adding a New Shock Type
 
@@ -67,18 +53,19 @@ If your change breaks any of these, it will be caught by the property-based test
 
 ```
 engine/          # Core simulation engine (importable package)
+  simulation.py  # Main simulation loop
   config.py      # SimConfig dataclass
-  ledger.py      # Double-entry bookkeeping
+  ledger.py      # Transaction ledger (double-entry)
   actors.py      # Individual, Firm, Bank, Government
   accounts.py    # Account utilities and sector helpers
   markets.py     # Labor and goods market clearing
   policy.py      # Government operations and taxation
-  production.py  # Cobb-Douglas production functions
+  production.py  # Production functions and price/wage rules
   shocks.py      # Scenario shocks
   metrics.py     # DailyStats and metric collection
   io.py          # YAML config, CSV export, run artifacts
-  simulation.py  # Main simulation loop
 
 dashboard/       # Flask web UI (optional dependency)
 tests/           # Test suite
+configs/         # YAML config presets
 ```

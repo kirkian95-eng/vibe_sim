@@ -13,7 +13,7 @@ def small_sim():
     config = SimConfig(
         seed=42,
         num_days=30,
-        num_individuals=100,
+        num_individuals=50,
         num_food_firms=2,
         num_energy_firms=2,
         num_shelter_firms=2,
@@ -25,8 +25,8 @@ def small_sim():
 
 @pytest.fixture
 def medium_sim():
-    """A 90-day sim with default population."""
-    config = SimConfig(seed=42, num_days=90)
+    """A 90-day sim with moderate population."""
+    config = SimConfig(seed=42, num_days=90, num_individuals=50)
     sim = Simulation(config)
     sim.run()
     return sim

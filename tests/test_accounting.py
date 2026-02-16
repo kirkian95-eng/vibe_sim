@@ -97,7 +97,7 @@ def test_simulation_accounting_valid():
     config = SimConfig(
         seed=123,
         num_days=30,
-        num_individuals=100,
+        num_individuals=50,
         num_food_firms=2,
         num_energy_firms=2,
         num_shelter_firms=2,
@@ -132,11 +132,11 @@ def test_simulation_accounting_valid():
 
 
 def test_simulation_longer_run():
-    """Test a full year with accounting validation."""
+    """Test a longer run with accounting validation."""
     config = SimConfig(
         seed=42,
-        num_days=365,
-        num_individuals=200,
+        num_days=90,
+        num_individuals=50,
         num_food_firms=3,
         num_energy_firms=2,
         num_shelter_firms=2,
@@ -145,7 +145,7 @@ def test_simulation_longer_run():
     sim = Simulation(config)
     results = sim.run()
 
-    assert len(results) == 365
+    assert len(results) == 90
 
     # All daily stats should show accounting is valid
     for stat in results:

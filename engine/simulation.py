@@ -185,7 +185,9 @@ class Simulation:
         self._profile("profit_dist", time.perf_counter() - t0)
 
         # 8. Price and wage adjustments
-        adjust_prices_and_wages(cfg, self.firms, labor_stats["unemployment_rate"])
+        adjust_prices_and_wages(
+            cfg, self.firms, labor_stats["unemployment_rate"], ledger=self.ledger,
+        )
 
         # 9. Collect statistics
         t0 = time.perf_counter()

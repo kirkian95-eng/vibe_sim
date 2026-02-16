@@ -62,19 +62,30 @@ def post_goods_sale(
     total_price = quantity * price_per_unit
 
     # Buyer's transaction: acquire inventory (at nominal $1/unit), pay cash (at market price)
-    # Shortfall goes to equity (immediate consumption value)
-    ledger.post(day, f"Purchase: {buyer.id} buys {quantity:.1f} {good.value}", [
-        (f"{buyer.id}:inventory:{good.value}", quantity, 0),  # nominal value
-        (f"{buyer.id}:cash", 0, total_price),  # actual payment
-        (f"{buyer.id}:equity", total_price - quantity, 0),  # difference (consumption surplus/deficit)
-    ])
+    # Equity adjusts for the difference between nominal and market value.
+    diff = total_price - quantity
+    if diff >= 0:
+        # Paid more than nominal — equity debit (expense-like)
+        buyer_lines = [
+            (f"{buyer.id}:inventory:{good.value}", quantity, 0),
+            (f"{buyer.id}:cash", 0, total_price),
+            (f"{buyer.id}:equity", diff, 0),
+        ]
+    else:
+        # Paid less than nominal — equity credit (gain)
+        buyer_lines = [
+            (f"{buyer.id}:inventory:{good.value}", quantity, 0),
+            (f"{buyer.id}:cash", 0, total_price),
+            (f"{buyer.id}:equity", 0, -diff),
+        ]
+    ledger.post(day, f"Purchase: {buyer.id} buys {quantity:.1f} {good.value}", buyer_lines)
 
     # Firm's transaction: receive cash, record revenue, reduce inventory, record COGS
     ledger.post(day, f"Sale: {firm.id} sells {quantity:.1f} {good.value}", [
         (f"{firm.id}:cash", total_price, 0),
         (f"{firm.id}:revenue", 0, total_price),
-        (f"{firm.id}:inventory", 0, quantity),  # nominal value
-        (f"{firm.id}:equity", quantity, 0),  # COGS (cost of inventory sold)
+        (f"{firm.id}:inventory", 0, quantity),
+        (f"{firm.id}:equity", quantity, 0),
     ])
 
 
@@ -156,9 +167,10 @@ def clear_labor_market(
         )
         # Constrained by cash: can the firm afford this many workers?
         cash = ledger.account_balance(f"{firm.id}:cash")
-        max_affordable = int(cash / max(firm.wage_offer, 1.0))
-        wanted = max(1, min(int(labor_needed) + 1, max_affordable))
-        labor_demands.append((firm, wanted))
+        max_affordable = max(0, int(cash / max(firm.wage_offer, 1.0)))
+        wanted = min(int(labor_needed) + 1, max_affordable)
+        if wanted > 0:
+            labor_demands.append((firm, wanted))
 
     # Shuffle workers for random matching
     workers = [ind for ind in individuals if not ind.is_owner]
@@ -240,6 +252,10 @@ def clear_goods_market(
     total_sales: dict[str, float] = {g.value: 0.0 for g in GoodType}
     total_revenue: dict[str, float] = {g.value: 0.0 for g in GoodType}
 
+    # Track per-firm daily sales for EMA (accumulated, not per-transaction)
+    firm_day_sales: dict[str, float] = {f.id: 0.0 for f in firms}
+    firm_day_revenue: dict[str, float] = {f.id: 0.0 for f in firms}
+
     # Shuffle individuals for fairness
     order = list(individuals)
     rng.shuffle(order)
@@ -289,8 +305,13 @@ def clear_goods_market(
                 cash -= cost
                 total_sales[good_type.value] += qty
                 total_revenue[good_type.value] += cost
-                firm.daily_sales = (firm.daily_sales * 0.9) + qty * 0.1  # EMA
-                firm.daily_revenue = (firm.daily_revenue * 0.9) + cost * 0.1
+                firm_day_sales[firm.id] += qty
+                firm_day_revenue[firm.id] += cost
+
+    # Update firm EMAs with daily totals (not per-transaction)
+    for firm in firms:
+        firm.daily_sales = (firm.daily_sales * 0.9) + firm_day_sales[firm.id] * 0.1
+        firm.daily_revenue = (firm.daily_revenue * 0.9) + firm_day_revenue[firm.id] * 0.1
 
     for g in GoodType:
         stats[f"{g.value}_quantity_sold"] = total_sales[g.value]
@@ -325,14 +346,18 @@ def adjust_prices_and_wages(
     config: SimConfig,
     firms: list[Firm],
     unemployment_rate: float,
+    ledger: Ledger | None = None,
 ) -> None:
-    """End-of-day price and wage adjustments."""
+    """End-of-day price and wage adjustments based on inventory levels."""
     from .production import adjust_price, adjust_wage
 
     for firm in firms:
+        inventory = 0.0
+        if ledger is not None:
+            inventory = ledger.account_balance(f"{firm.id}:inventory")
         firm.price = adjust_price(
             firm.price,
-            0,  # we'll use daily_sales as proxy
+            inventory,
             max(1.0, firm.daily_sales),
             config.target_inventory_days,
             config.price_adjustment_speed,

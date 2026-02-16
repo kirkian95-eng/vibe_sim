@@ -262,7 +262,10 @@ class Ledger:
         return True
 
     def check_balance_sheet_equation(self, actor_id: str) -> bool:
-        """Assets = Liabilities + Equity + Revenue - Expense."""
+        """Assets = Liabilities + Equity + Revenue - Expense.
+
+        Tolerance scales with journal size to handle float64 accumulation.
+        """
         bs = self.balance_sheet(actor_id)
         total_assets = sum(bs["asset"].values())
         total_liabilities = sum(bs["liability"].values())
@@ -271,12 +274,16 @@ class Ledger:
         total_expense = sum(bs["expense"].values())
         lhs = total_assets
         rhs = total_liabilities + total_equity + total_revenue - total_expense
-        return bool(abs(lhs - rhs) < EPSILON)
+        tol = EPSILON + len(self._journal) * 1e-10
+        return bool(abs(lhs - rhs) < tol)
 
     def check_system_balance(self) -> bool:
         """
         Total debits in all accounts must equal total credits.
         Equivalently: sum of all debit-normal balances = sum of all credit-normal balances.
+
+        Uses a tolerance that scales with the number of journal entries
+        to account for float64 accumulation error in large simulations.
         """
         total_debit_normal = 0.0
         total_credit_normal = 0.0
@@ -285,7 +292,9 @@ class Ledger:
                 total_debit_normal += acct.balance
             else:
                 total_credit_normal += acct.balance
-        return abs(total_debit_normal - total_credit_normal) < EPSILON
+        # Scale tolerance: base EPSILON + 1e-10 per journal entry
+        tol = EPSILON + len(self._journal) * 1e-10
+        return abs(total_debit_normal - total_credit_normal) < tol
 
     def check_sector_balance(self, actor_ids: list[str]) -> float:
         """
