@@ -6,7 +6,7 @@ A macroeconomic sandbox for hobbyists and academics to explore how fiscal policy
 
 VibeSim lets you spin up a small economy — with workers, firms, a bank, and a government — and watch what happens when you pull different policy levers. Raise taxes, cut spending, trigger a technology boom, or cause an energy crisis, and see how employment, prices, output, and inequality respond.
 
-Under the hood, a consistent double-entry ledger tracks every dollar so nothing leaks. But the point isn't the bookkeeping — it's the sandbox.
+Think of it as SimCity for macroeconomics — tune the knobs, watch the dials, and build intuition for how real economies respond to policy changes.
 
 ## Features
 
@@ -157,7 +157,7 @@ configs/          # YAML config presets
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). All changes should preserve ledger consistency (the smoke tests enforce this).
+See [CONTRIBUTING.md](CONTRIBUTING.md). Run the smoke tests before submitting a PR.
 
 ---
 

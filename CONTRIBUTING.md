@@ -55,7 +55,7 @@ mypy engine/ --ignore-missing-imports
 engine/          # Core simulation engine (importable package)
   simulation.py  # Main simulation loop
   config.py      # SimConfig dataclass
-  ledger.py      # Transaction ledger (double-entry)
+  ledger.py      # Financial transaction tracking
   actors.py      # Individual, Firm, Bank, Government
   accounts.py    # Account utilities and sector helpers
   markets.py     # Labor and goods market clearing
