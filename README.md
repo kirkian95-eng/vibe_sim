@@ -25,23 +25,66 @@ Think of it as SimCity for macroeconomics — tune the knobs, watch the dials, a
 - **Reproducible**: Seeded RNG — same seed, same results
 - **Exportable**: CSV output, YAML configs, run artifact saving
 
-## Quick Start
+## Getting Started (< 2 Minutes)
+
+### Prerequisites
+
+You need **Python 3.10 or newer** installed. If you don't have it, download it from [python.org/downloads](https://www.python.org/downloads/) and follow the installer.
+
+You also need a **terminal** (command line):
+- **macOS**: Open the "Terminal" app (search for it in Spotlight)
+- **Windows**: Open "Command Prompt" or "PowerShell" from the Start menu
+- **Linux**: Open your terminal emulator (usually Ctrl+Alt+T)
+
+### Step 1: Download the project
+
+In your terminal, run:
 
 ```bash
-# Install
-pip install -r requirements.txt
-
-# Launch the dashboard
-python run.py
-
-# Or run a CLI demo
-python run.py --demo
-
-# Run tests
-pytest -m smoke tests/
+git clone <repo-url>
+cd vibe_sim
 ```
 
-Open http://localhost:5001 to configure parameters, select a scenario, and run.
+Replace `<repo-url>` with the actual repository URL.
+
+### Step 2: Install dependencies
+
+This one command installs everything VibeSim needs:
+
+```bash
+pip install -r requirements.txt
+```
+
+### Step 3: Launch the dashboard
+
+```bash
+python run.py
+```
+
+You'll see output like `Running on http://0.0.0.0:5001`. That means the server is running.
+
+### Step 4: Open in your browser
+
+Go to: **http://localhost:5001**
+
+"Localhost" just means "this computer" — the simulation server is running on your own machine, and your browser connects to it.
+
+### Step 5: Run your first simulation
+
+1. You'll see a dashboard with parameter sliders on the left
+2. Click **"Run Simulation"** at the top
+3. Wait a few seconds — interactive charts will appear in tabs (Macro, Prices, Distribution, Demographics, and more)
+4. Try selecting a scenario like "stimulus" or "energy_crisis" and running again to see how the economy responds
+
+### Alternative: Quick CLI Demo
+
+If you just want to verify things work without opening a browser:
+
+```bash
+python run.py --demo
+```
+
+This runs a 24-month baseline vs. stimulus comparison and prints results to your terminal.
 
 ## How It Works
 

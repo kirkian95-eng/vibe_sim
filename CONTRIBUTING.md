@@ -62,7 +62,9 @@ engine/          # Core simulation engine (importable package)
   policy.py      # Government operations and taxation
   production.py  # Production functions and price/wage rules
   shocks.py      # Scenario shocks
-  metrics.py     # DailyStats and metric collection
+  demographics.py # Aging, births, deaths, life-stage transitions
+  bonds.py       # Government bond market and interest
+  metrics.py     # MonthlyStats and metric collection
   io.py          # YAML config, CSV export, run artifacts
 
 dashboard/       # Flask web UI (optional dependency)

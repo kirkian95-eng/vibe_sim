@@ -1,7 +1,7 @@
 # Model Assumptions
 
 This document describes the modelling choices, economic framework,
-and known limitations of VibeSim v0.1.
+and known limitations of VibeSim v0.2.
 
 ---
 
@@ -10,10 +10,10 @@ and known limitations of VibeSim v0.1.
 VibeSim is a sandbox for exploring how fiscal and monetary policy
 affect a simulated economy. It models a closed economy with:
 
-- **Workers** who earn wages and consume goods
-- **Firms** that produce food, energy, and shelter using labor and capital
+- **Individuals** who are born, age, work, retire, and die
+- **Firms** that produce food, energy, shelter, and healthcare using labor and capital
 - **A bank** that intermediates financial flows
-- **A government** that spends money into existence, collects taxes, and makes transfers
+- **A government** that spends money into existence, collects taxes, pays pensions, funds healthcare, and issues bonds
 
 The simulation is designed for experimentation, not forecasting. Default
 parameters are starting points — users should tune them for their
@@ -28,12 +28,14 @@ VibeSim follows a Modern Monetary Theory framework:
 - Government deficit = net money injected into the private sector
 - The government cannot "run out of money" — it is the currency issuer
 - Taxation manages aggregate demand, not "funding"
+- Government bonds allow deposit holders to swap cash for interest-bearing assets
 
-### What Is NOT Modelled (v0.1)
+### What Is NOT Modelled
 
-- **Bank lending / credit creation**: The bank is a pure intermediary.
+- **Bank lending / credit creation**: The bank is a pure intermediary; money supply is determined entirely by fiscal policy.
 - **Interest on reserves / deposits**: The rate parameter exists but isn't applied yet.
-- **Bond trading**: Government bonds exist in the schema but are not traded.
+- **Capital accumulation**: Firms cannot invest in new capital; capital stock is fixed at startup.
+- **Depreciation**: Capital doesn't decay over time.
 
 ---
 
@@ -56,7 +58,45 @@ entity. This simplification:
 
 ---
 
-## 3. Production and Pricing
+## 3. Demographics
+
+### Life Stages
+
+Each individual has an age (in months) and a life stage:
+
+| Stage | Age Range | Behavior |
+|-------|-----------|----------|
+| CHILD | 0–17 years (< 216 months) | Does not work. Consumes 50% of adult food, paid by guardian. |
+| ADULT | 18–64 years (216–779 months) | Works, consumes, may have children. |
+| RETIRED | 65+ years (≥ 780 months) | Receives pension, consumes, faces mortality risk from age 72. |
+
+### Initial Population
+
+At startup, ages are distributed uniformly across 1–72 years. This produces
+a mix of children, working-age adults, and retirees from month 1.
+
+### Fertility
+
+- Eligible adults (18–64, alive, no cooldown) are randomly paired each month
+- Each pair has a chance of producing a child based on `fertility_rate_annual`
+- After birth: 12-month fertility cooldown and a parenting labor penalty (0.5× wage) for a configurable number of months
+- Births incur a healthcare fee paid to a healthcare firm
+
+### Mortality
+
+- Mortality hazard begins at `mortality_start_age` (default: 72 years)
+- Constant monthly hazard calibrated so expected death age = `target_death_age` (default: 80)
+- On death: individual marked as not alive, estate (cash) transferred to a random living adult
+
+### Aging and Transitions
+
+Each month, `advance_ages()` increments every living individual's age by 1 month.
+When an individual crosses a life-stage boundary (18 years, retirement age),
+their stage transitions automatically. New retirees leave the labor force.
+
+---
+
+## 4. Production and Pricing
 
 ### Production Function
 
@@ -65,7 +105,7 @@ Firms use a **Cobb-Douglas** production function:
     output = A × L^α × K^β
 
 - `A` = sector-specific productivity
-- `L` = workers hired that day
+- `L` = workers hired that month
 - `K` = firm capital stock
 - `α` = labor share (default 0.7), `β` = capital share (default 0.3)
 
@@ -78,8 +118,8 @@ investment decision — the capital stock is fixed.
 
 ### Inventory and Pricing
 
-Firms target `avg_daily_sales × target_inventory_days` units of inventory.
-Prices adjust daily based on the inventory-to-target ratio:
+Firms target `avg_monthly_sales × target_inventory_months` units of inventory.
+Prices adjust monthly based on the inventory-to-target ratio:
 
     ratio = current_inventory / target_inventory
     new_price = old_price × (1 + (1 - ratio) × adjustment_speed)
@@ -101,7 +141,44 @@ Wages respond to the gap between actual and target unemployment:
 
 ---
 
-## 4. Market Clearing
+## 5. Government Bonds
+
+Each month, the government issues bonds to cover its deficit:
+
+1. **Bond supply** = max(0, government deficit for the month)
+2. **Bond demand** = individuals offer a fraction of their deposits
+3. **Clearing**: A bisection algorithm finds the market-clearing interest rate within `[rate_min, rate_max]`
+4. **Settlement**: Buyers swap deposits for bond assets; government records bonds issued
+5. **Interest**: Monthly coupon = annual_rate / 12 × bond_holdings, paid to each bondholder via money creation
+
+Bonds are a financial portfolio choice — they convert liquid deposits into
+interest-bearing government liabilities.
+
+---
+
+## 6. Healthcare
+
+Healthcare firms produce capacity using labor (Cobb-Douglas, same as other firms).
+
+- **Elder care**: The government pays for monthly healthcare visits for retirees, subject to capacity constraints
+- **Childbirth**: Each birth incurs a healthcare fee paid from the parent's deposits
+- **Shortage tracking**: If healthcare demand exceeds capacity, the shortfall is recorded in monthly metrics
+
+---
+
+## 7. Pensions
+
+All retired individuals receive a monthly pension:
+
+    pension = pension_replacement_rate × average_wage
+
+- Default replacement rate: 50%
+- Pensions are funded by government money creation (consistent with MMT)
+- Pension payments are recorded as government transfers in the ledger
+
+---
+
+## 8. Market Clearing
 
 ### Labor Market
 
@@ -110,9 +187,10 @@ Wages respond to the gap between actual and target unemployment:
 3. Workers are shuffled randomly; firms sorted by wage (highest first)
 4. Workers allocated greedily until each firm's demand is met
 5. Wages paid immediately via ledger entry
+6. Only living adults are eligible for employment
 
 **Limitations**: No skill heterogeneity, no search frictions, employment
-resets daily (no contracts).
+resets monthly (no contracts).
 
 ### Goods Market
 
@@ -121,13 +199,14 @@ resets daily (no contracts).
 3. Buy from cheapest firm with stock
 4. Quantity = min(need, available inventory, affordable)
 5. Sales tax collected per transaction
+6. Guardians purchase food for their children (at 50% of adult quantity)
 
-**Limitations**: Fixed daily needs (no demand elasticity), no credit
+**Limitations**: Fixed monthly needs (no demand elasticity), no credit
 purchases, no saving/investment optimization.
 
 ---
 
-## 5. Known Limitations
+## 9. Known Limitations
 
 ### Structural
 1. **No bank lending** — money supply determined entirely by fiscal policy
@@ -140,27 +219,28 @@ purchases, no saving/investment optimization.
 6. **No expectations** — agents use simple adaptive rules
 7. **Fixed consumption needs** — no demand elasticity or luxury goods
 8. **Homogeneous labor** — all workers identical
-9. **Daily employment reset** — no hiring/firing costs
+9. **Monthly employment reset** — no hiring/firing costs
 
 ### Numerical
-10. **Float64 precision** — over very long runs (10,000+ days) with many
+10. **Float64 precision** — over very long runs (1,000+ months) with many
     agents, accumulated rounding may approach tolerance thresholds
 11. **Inventory at $1/unit** — creates equity adjustments on every sale
     when market price differs from nominal
 
 ---
 
-## 6. Planned Extensions
+## 10. Planned Extensions
 
 - Bank lending and endogenous credit creation
 - Capital investment with an accelerator mechanism
 - Depreciation requiring reinvestment
-- Bond market between government, bank, and agents
-- Interest rate policy
+- Interest rate policy (policy rate targeting)
 - Open economy with trade and exchange rates
 - Heterogeneous agents (skills, preferences)
 - Demand elasticity (luxury consumption, savings)
+- Immigration and emigration
+- Education and human capital accumulation
 
 ---
 
-*Document version: 0.1.0 — February 2026*
+*Document version: 0.2.0 — February 2026*

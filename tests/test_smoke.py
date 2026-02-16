@@ -5,6 +5,8 @@ Smoke tests -- minimal sanity checks designed to run fast in CI.
 import pytest
 
 from engine import SimConfig, Simulation
+from engine.actors import create_all_actors, LifeStage
+from engine.ledger import Ledger
 
 
 @pytest.mark.smoke
@@ -51,3 +53,44 @@ def test_smoke_import():
     from engine import __version__
 
     assert __version__ == "0.2.0"
+
+
+@pytest.mark.smoke
+def test_initial_age_distribution_roughly_uniform():
+    """Initial population ages should be spread roughly evenly from 0 to 72 years.
+
+    This is a standalone data-structure check (no simulation run), so we use
+    700 individuals for statistical accuracy.
+    """
+    ledger = Ledger()
+    actors = create_all_actors(
+        ledger=ledger,
+        num_individuals=700,
+        num_food_firms=2,
+        num_energy_firms=2,
+        num_shelter_firms=2,
+        num_owners=6,
+        initial_prices={"food": 10.0, "energy": 8.0, "shelter": 15.0, "healthcare": 20.0},
+        initial_wage=2400.0,
+        num_healthcare_firms=1,
+    )
+    individuals = actors["individuals"]
+    assert len(individuals) == 700
+
+    # Bucket into 6 age bands of 12 years each.
+    band_size_years = 12
+    num_bands = 6
+    bands = [0] * num_bands
+
+    for ind in individuals:
+        age_years = ind.age_months / 12
+        band_idx = min(int(age_years // band_size_years), num_bands - 1)
+        bands[band_idx] += 1
+
+    expected_per_band = 700 / num_bands  # ~116.7
+    for i, count in enumerate(bands):
+        lo = i * band_size_years
+        hi = (i + 1) * band_size_years
+        assert abs(count - expected_per_band) <= 15, (
+            f"Age band {lo}-{hi}y: expected ~{expected_per_band:.0f}, got {count}"
+        )
