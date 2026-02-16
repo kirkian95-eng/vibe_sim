@@ -94,7 +94,7 @@ class SimConfig:
     retirement_age: int = 65  # years
     mortality_start_age: int = 72  # years
     target_death_age: int = 80  # average death age
-    fertility_rate_annual: float = 0.01  # ~1% annual growth target
+    fertility_rate_annual: float = 0.02  # ~2% annual growth target
 
     # ── Pensions ────────────────────────────────────────────────────
     pension_replacement_rate: float = 0.50  # fraction of trailing avg wage

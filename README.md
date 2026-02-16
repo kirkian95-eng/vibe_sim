@@ -157,7 +157,7 @@ Key parameters (see `engine/config.py` or `configs/baseline.yaml`):
 | `initial_wage` | 2400 | Starting monthly wage |
 | `retirement_age` | 65 | Age of retirement (years) |
 | `pension_replacement_rate` | 0.50 | Pension as fraction of avg wage |
-| `fertility_rate_annual` | 0.01 | Target annual population growth |
+| `fertility_rate_annual` | 0.02 | Target annual population growth |
 
 Load from YAML:
 ```python

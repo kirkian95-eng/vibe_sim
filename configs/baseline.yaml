@@ -70,7 +70,7 @@ profit_distribution_rate: 0.50
 retirement_age: 65
 mortality_start_age: 72
 target_death_age: 80
-fertility_rate_annual: 0.01
+fertility_rate_annual: 0.02
 
 # Pensions
 pension_replacement_rate: 0.50
