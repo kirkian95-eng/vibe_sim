@@ -96,7 +96,7 @@ def test_simulation_accounting_valid():
     """A short simulation run should maintain all accounting invariants."""
     config = SimConfig(
         seed=123,
-        num_days=30,
+        num_months=6,
         num_individuals=50,
         num_food_firms=2,
         num_energy_firms=2,
@@ -135,7 +135,7 @@ def test_simulation_longer_run():
     """Test a longer run with accounting validation."""
     config = SimConfig(
         seed=42,
-        num_days=90,
+        num_months=12,
         num_individuals=50,
         num_food_firms=3,
         num_energy_firms=2,
@@ -145,12 +145,12 @@ def test_simulation_longer_run():
     sim = Simulation(config)
     results = sim.run()
 
-    assert len(results) == 90
+    assert len(results) == 12
 
-    # All daily stats should show accounting is valid
+    # All monthly stats should show accounting is valid
     for stat in results:
-        assert stat.all_balanced, f"Day {stat.day}: not all entries balanced"
-        assert stat.system_balanced, f"Day {stat.day}: system not balanced"
+        assert stat.all_balanced, f"Month {stat.month}: not all entries balanced"
+        assert stat.system_balanced, f"Month {stat.month}: system not balanced"
 
     # Final validation
     summary = sim.results_summary()
@@ -167,7 +167,7 @@ def test_sector_balance_identity():
     Private sector surplus = Government deficit + Foreign surplus
     (For closed economy with no foreign sector, private + govt = 0)
     """
-    config = SimConfig(num_days=90, seed=999)
+    config = SimConfig(num_months=12, seed=999)
     sim = Simulation(config)
     sim.run()
 
@@ -196,13 +196,13 @@ def test_money_creation_and_destruction():
     Government spending creates money (increases bank reserves/deposits).
     Taxation destroys money (decreases bank reserves/deposits).
     """
-    config = SimConfig(num_days=1, seed=1)
+    config = SimConfig(num_months=1, seed=1)
     sim = Simulation(config)
 
     initial_currency = sim.ledger.account_balance(f"{sim.govt.id}:currency_issued")
     initial_deposits = sim.ledger.account_balance(f"{sim.bank.id}:deposits")
 
-    # Run one day
+    # Run one month
     sim.step()
 
     final_currency = sim.ledger.account_balance(f"{sim.govt.id}:currency_issued")

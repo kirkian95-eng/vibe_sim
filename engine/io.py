@@ -1,5 +1,5 @@
 """
-I/O utilities: YAML config loading, CSV/Parquet export, run artifact saving.
+I/O utilities: YAML config loading, CSV export, run artifact saving.
 
 Run artifacts include: parameters, seed, git commit hash, summary metrics.
 """
@@ -15,7 +15,11 @@ from pathlib import Path
 from typing import Any
 
 from .config import SimConfig
-from .metrics import DailyStats
+from .metrics import MonthlyStats
+
+# Backward compatibility
+DailyStats = MonthlyStats
+
 
 # ── YAML config loading ──────────────────────────────────────────────
 
@@ -47,8 +51,8 @@ def save_config_yaml(config: SimConfig, path: str | Path) -> None:
 # ── CSV export ────────────────────────────────────────────────────────
 
 
-def write_results_csv(results: list[DailyStats], path: str | Path) -> None:
-    """Write daily stats to a tidy CSV file."""
+def write_results_csv(results: list[MonthlyStats], path: str | Path) -> None:
+    """Write monthly stats to a tidy CSV file."""
     if not results:
         return
     fieldnames = list(dc.asdict(results[0]).keys())
@@ -65,7 +69,7 @@ def write_ledger_csv(
 ) -> None:
     """Write the full journal to a flat CSV (one row per journal line)."""
     fieldnames = [
-        "entry_id", "day", "description", "account_id", "debit", "credit",
+        "entry_id", "month", "description", "account_id", "debit", "credit",
     ]
     with open(path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -74,7 +78,7 @@ def write_ledger_csv(
             for line in entry.lines:
                 writer.writerow({
                     "entry_id": entry.entry_id,
-                    "day": entry.day,
+                    "month": entry.day,
                     "description": entry.description,
                     "account_id": line.account_id,
                     "debit": line.debit,
@@ -93,7 +97,7 @@ def actor_history(journal: list, actor_id: str) -> list[dict[str, Any]]:
             if line.account_id.startswith(f"{actor_id}:"):
                 rows.append({
                     "entry_id": entry.entry_id,
-                    "day": entry.day,
+                    "month": entry.day,
                     "description": entry.description,
                     "account_id": line.account_id,
                     "debit": line.debit,
@@ -103,13 +107,13 @@ def actor_history(journal: list, actor_id: str) -> list[dict[str, Any]]:
 
 
 def market_history(
-    results: list[DailyStats],
+    results: list[MonthlyStats],
     good: str,
 ) -> list[dict[str, float]]:
     """Extract price/quantity/revenue history for a given good type."""
     return [
         {
-            "day": s.day,
+            "month": s.month,
             "price": getattr(s, f"{good}_price", 0.0),
             "produced": getattr(s, f"{good}_produced", 0.0),
             "sold": getattr(s, f"{good}_sold", 0.0),
@@ -140,7 +144,7 @@ def get_git_commit_hash() -> str | None:
 
 def save_run_artifacts(
     config: SimConfig,
-    results: list[DailyStats],
+    results: list[MonthlyStats],
     journal: list,
     output_dir: str | Path = "runs",
     extra_metadata: dict[str, Any] | None = None,
@@ -151,7 +155,7 @@ def save_run_artifacts(
     Creates:
       runs/<timestamp>_<name>/
         config.yaml
-        daily_stats.csv
+        monthly_stats.csv
         journal.csv
         metadata.json
     """
@@ -163,8 +167,8 @@ def save_run_artifacts(
     # Config
     save_config_yaml(config, run_dir / "config.yaml")
 
-    # Daily stats CSV
-    write_results_csv(results, run_dir / "daily_stats.csv")
+    # Monthly stats CSV
+    write_results_csv(results, run_dir / "monthly_stats.csv")
 
     # Journal CSV
     write_ledger_csv(journal, run_dir / "journal.csv")
@@ -175,15 +179,16 @@ def save_run_artifacts(
         "run_name": run_name,
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "seed": config.seed,
-        "num_days": config.num_days,
+        "num_months": config.num_months,
         "num_individuals": config.num_individuals,
         "num_firms": config.num_firms,
         "git_commit": get_git_commit_hash(),
-        "vibe_sim_version": "0.1.0",
+        "vibe_sim_version": "0.2.0",
         "summary": {
             "final_gdp": final.gdp if final else 0.0,
             "final_unemployment": final.unemployment_rate if final else 0.0,
             "final_gini": final.gini_coefficient if final else 0.0,
+            "final_population": final.population if final else 0,
             "total_journal_entries": len(journal),
         },
     }

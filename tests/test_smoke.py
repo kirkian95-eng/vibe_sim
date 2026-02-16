@@ -9,10 +9,10 @@ from engine import SimConfig, Simulation
 
 @pytest.mark.smoke
 def test_smoke_simulation():
-    """Quick end-to-end: 10 days, 50 agents, all invariants hold."""
+    """Quick end-to-end: 3 months, 50 agents, all invariants hold."""
     config = SimConfig(
         seed=1,
-        num_days=10,
+        num_months=3,
         num_individuals=50,
         num_food_firms=1,
         num_energy_firms=1,
@@ -21,7 +21,7 @@ def test_smoke_simulation():
     sim = Simulation(config)
     results = sim.run()
 
-    assert len(results) == 10
+    assert len(results) == 3
     assert results[-1].gdp > 0
     assert sim.ledger.check_all_entries_balanced()
     assert sim.ledger.check_system_balance()
@@ -34,7 +34,7 @@ def test_smoke_simulation():
 @pytest.mark.smoke
 def test_smoke_profiling():
     """Profiling hooks should produce timing data."""
-    config = SimConfig(seed=1, num_days=5, num_individuals=50)
+    config = SimConfig(seed=1, num_months=3, num_individuals=50)
     sim = Simulation(config)
     sim.run()
 
@@ -50,4 +50,4 @@ def test_smoke_import():
     """Core public API should be importable."""
     from engine import __version__
 
-    assert __version__ == "0.1.0"
+    assert __version__ == "0.2.0"

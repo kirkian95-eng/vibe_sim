@@ -2,7 +2,7 @@
 Property-based and randomized tests.
 
 Uses hypothesis to verify that accounting invariants hold under
-random configurations and seeds. Runs 50-200 ticks per test.
+random configurations and seeds. Runs a few months per test.
 """
 
 from hypothesis import HealthCheck, given, settings
@@ -15,16 +15,16 @@ from engine import SimConfig, Simulation
 sim_config_strategy = st.builds(
     SimConfig,
     seed=st.integers(min_value=1, max_value=100_000),
-    num_days=st.integers(min_value=30, max_value=90),
+    num_months=st.integers(min_value=3, max_value=12),
     num_individuals=st.integers(min_value=20, max_value=50),
     num_food_firms=st.integers(min_value=1, max_value=3),
     num_energy_firms=st.integers(min_value=1, max_value=3),
     num_shelter_firms=st.integers(min_value=1, max_value=3),
     income_tax_rate=st.floats(min_value=0.01, max_value=0.50),
     sales_tax_rate=st.floats(min_value=0.0, max_value=0.20),
-    daily_govt_transfer=st.floats(min_value=1.0, max_value=100.0),
-    daily_govt_spending=st.floats(min_value=1000.0, max_value=20000.0),
-    initial_wage=st.floats(min_value=30.0, max_value=200.0),
+    monthly_govt_transfer=st.floats(min_value=50.0, max_value=3000.0),
+    monthly_govt_spending=st.floats(min_value=30000.0, max_value=600000.0),
+    initial_wage=st.floats(min_value=900.0, max_value=6000.0),
 )
 
 
@@ -124,7 +124,7 @@ def test_gdp_non_negative(config):
     results = sim.run()
     for stat in results:
         assert stat.gdp >= 0, (
-            f"Negative GDP on day {stat.day} (seed={config.seed})"
+            f"Negative GDP on month {stat.month} (seed={config.seed})"
         )
 
 
@@ -142,9 +142,9 @@ def test_prices_always_positive(config):
     sim = Simulation(config)
     results = sim.run()
     for stat in results:
-        assert stat.food_price > 0, f"Food price <= 0 day {stat.day}"
-        assert stat.energy_price > 0, f"Energy price <= 0 day {stat.day}"
-        assert stat.shelter_price > 0, f"Shelter price <= 0 day {stat.day}"
+        assert stat.food_price > 0, f"Food price <= 0 month {stat.month}"
+        assert stat.energy_price > 0, f"Energy price <= 0 month {stat.month}"
+        assert stat.shelter_price > 0, f"Shelter price <= 0 month {stat.month}"
 
 
 # ── Deterministic: same seed, same result ────────────────────────────
@@ -154,7 +154,7 @@ def test_prices_always_positive(config):
 @settings(max_examples=5, deadline=None)
 def test_deterministic_with_random_seed(seed):
     """Same seed must produce identical results."""
-    config = SimConfig(num_days=30, seed=seed, num_individuals=100)
+    config = SimConfig(num_months=6, seed=seed, num_individuals=50)
 
     sim1 = Simulation(config)
     r1 = sim1.run()
@@ -163,5 +163,5 @@ def test_deterministic_with_random_seed(seed):
     r2 = sim2.run()
 
     for i, (a, b) in enumerate(zip(r1, r2, strict=True)):
-        assert abs(a.gdp - b.gdp) < 1e-6, f"Day {i}: GDP differs for seed={seed}"
+        assert abs(a.gdp - b.gdp) < 1e-6, f"Month {i}: GDP differs for seed={seed}"
         assert abs(a.unemployment_rate - b.unemployment_rate) < 1e-9

@@ -160,7 +160,7 @@
         }
         .kpi-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
             gap: 12px;
             margin-bottom: 16px;
         }
@@ -205,6 +205,7 @@
             display: flex;
             gap: 4px;
             margin-bottom: 16px;
+            flex-wrap: wrap;
         }
         .tab {
             padding: 6px 16px;
@@ -275,7 +276,7 @@
             color: var(--accent4);
             min-width: 24px;
         }
-        #city-day-counter {
+        #city-month-counter {
             margin-left: auto;
             font-size: 11px;
             color: var(--text-dim);
@@ -335,8 +336,8 @@
             <h3>General</h3>
             <div class="param-row">
                 <div>
-                    <label>Days</label>
-                    <input type="number" id="num_days" value="365" min="30" max="3650">
+                    <label>Months</label>
+                    <input type="number" id="num_months" value="120" min="6" max="1200">
                 </div>
                 <div>
                     <label>Seed</label>
@@ -374,7 +375,7 @@
                 </div>
                 <div>
                     <label>Init Wage</label>
-                    <input type="number" id="initial_wage" value="80" min="10" max="500">
+                    <input type="number" id="initial_wage" value="2400" min="10" max="15000">
                 </div>
             </div>
 
@@ -391,23 +392,47 @@
             </div>
             <div class="param-row">
                 <div>
-                    <label>Transfers/day</label>
-                    <input type="number" id="daily_govt_transfer" value="10" min="0" max="200">
+                    <label>Transfers/mo</label>
+                    <input type="number" id="monthly_govt_transfer" value="300" min="0" max="6000">
                 </div>
                 <div>
-                    <label>Spending/day</label>
-                    <input type="number" id="daily_govt_spending" value="5000" min="0" max="100000">
+                    <label>Spending/mo</label>
+                    <input type="number" id="monthly_govt_spending" value="150000" min="0" max="3000000">
+                </div>
+            </div>
+
+            <h3>Demographics</h3>
+            <div class="param-row">
+                <div>
+                    <label>Retirement Age</label>
+                    <input type="number" id="retirement_age" value="65" min="50" max="80">
+                </div>
+                <div>
+                    <label>Pension Replace Rate</label>
+                    <input type="number" id="pension_replacement_rate" value="0.50" step="0.05" min="0" max="1.0">
+                </div>
+            </div>
+
+            <h3>Healthcare</h3>
+            <div class="param-row">
+                <div>
+                    <label>HC Firms</label>
+                    <input type="number" id="num_healthcare_firms" value="2" min="1" max="20">
+                </div>
+                <div>
+                    <label>Elder HC Mo Cost</label>
+                    <input type="number" id="elder_healthcare_monthly_cost" value="500" min="0" max="5000">
                 </div>
             </div>
 
             <h3>Scenario Shock</h3>
             <select id="scenario">
                 <option value="baseline">Baseline (no shocks)</option>
-                <option value="stimulus">Stimulus spending (+10k/day at d90)</option>
-                <option value="austerity">Austerity (-50% at d90)</option>
-                <option value="tax_reform">Tax reform (10% at d90)</option>
-                <option value="tech_boom">Tech boom (food 2x, energy 1.5x at d90)</option>
-                <option value="energy_crisis">Energy crisis (60% drop at d90)</option>
+                <option value="stimulus">Stimulus spending (+300k/mo at m6)</option>
+                <option value="austerity">Austerity (-50% at m6)</option>
+                <option value="tax_reform">Tax reform (10% at m6)</option>
+                <option value="tech_boom">Tech boom (food 2x, energy 1.5x at m6)</option>
+                <option value="energy_crisis">Energy crisis (60% drop at m6)</option>
                 <option value="stagflation">Stagflation (crisis + stimulus)</option>
             </select>
 
@@ -439,6 +464,9 @@
                     <button class="tab" onclick="showTab('distribution', this)">Distribution</button>
                     <button class="tab" onclick="showTab('sectors', this)">Sector Balances</button>
                     <button class="tab" onclick="showTab('production', this)">Production</button>
+                    <button class="tab" onclick="showTab('demographics', this)">Demographics</button>
+                    <button class="tab" onclick="showTab('healthcare', this)">Healthcare</button>
+                    <button class="tab" onclick="showTab('bonds', this)">Bonds</button>
                     <button class="tab" onclick="showTab('city', this)">City View</button>
                 </div>
 
@@ -450,7 +478,7 @@
                         <label for="city-speed" class="city-speed-label">Speed</label>
                         <input type="range" id="city-speed" min="0" max="3" step="1" value="0">
                         <span id="city-speed-value">1x</span>
-                        <span id="city-day-counter">Day 1 / 1</span>
+                        <span id="city-month-counter">Month 1 / 1</span>
                     </div>
                     <div class="city-stats-bar" id="city-stats-bar"></div>
                     <div class="city-canvas-wrap">
@@ -491,8 +519,8 @@ const cityState = {
     rafId: null,
     playing: true,
     speedIndex: 0,
-    dayFloat: 0,
-    currentDay: 0,
+    monthFloat: 0,
+    currentMonth: 0,
     lastTs: 0,
     numAgents: 100,
     layout: null,
@@ -503,7 +531,7 @@ const cityState = {
 
 function getConfig() {
     return {
-        num_days: +document.getElementById('num_days').value,
+        num_months: +document.getElementById('num_months').value,
         seed: +document.getElementById('seed').value,
         num_individuals: +document.getElementById('num_individuals').value,
         owner_fraction: +document.getElementById('owner_fraction').value,
@@ -513,8 +541,12 @@ function getConfig() {
         initial_wage: +document.getElementById('initial_wage').value,
         income_tax_rate: +document.getElementById('income_tax_rate').value,
         sales_tax_rate: +document.getElementById('sales_tax_rate').value,
-        daily_govt_transfer: +document.getElementById('daily_govt_transfer').value,
-        daily_govt_spending: +document.getElementById('daily_govt_spending').value,
+        monthly_govt_transfer: +document.getElementById('monthly_govt_transfer').value,
+        monthly_govt_spending: +document.getElementById('monthly_govt_spending').value,
+        retirement_age: +document.getElementById('retirement_age').value,
+        pension_replacement_rate: +document.getElementById('pension_replacement_rate').value,
+        num_healthcare_firms: +document.getElementById('num_healthcare_firms').value,
+        elder_healthcare_monthly_cost: +document.getElementById('elder_healthcare_monthly_cost').value,
     };
 }
 
@@ -654,23 +686,23 @@ function spawnAgents(config, layout) {
     return agents;
 }
 
-function updateAgentRoles(dayStats, dayNumber) {
+function updateAgentRoles(monthStats, monthNumber) {
     const nonOwners = cityState.agents.filter((a) => a.role !== CITY_ROLES.OWNER);
-    const employedRatio = Math.max(0.02, 1 - dayStats.unemployment_rate);
+    const employedRatio = Math.max(0.02, 1 - monthStats.unemployment_rate);
     for (let i = 0; i < nonOwners.length; i += 1) {
         const a = nonOwners[i];
-        const pseudo = ((a.id * 37 + dayNumber * 17) % 1000) / 1000;
+        const pseudo = ((a.id * 37 + monthNumber * 17) % 1000) / 1000;
         a.role = pseudo < employedRatio ? CITY_ROLES.EMPLOYED : CITY_ROLES.UNEMPLOYED;
     }
 }
 
-function chooseAgentTarget(agent, dayStats) {
+function chooseAgentTarget(agent, monthStats) {
     if (!cityState.layout) return;
-    const gdpScale = Math.min(1, dayStats.gdp / 50000);
+    const gdpScale = Math.min(1, monthStats.gdp / 50000);
     const shouldShop = Math.random() < (0.15 + gdpScale * 0.5);
 
     if (agent.role === CITY_ROLES.OWNER) {
-        const f = cityState.layout.firms[(agent.id + cityState.currentDay) % cityState.layout.firms.length];
+        const f = cityState.layout.firms[(agent.id + cityState.currentMonth) % cityState.layout.firms.length];
         agent.target = f ? f.entrance : agent.home.entrance;
         return;
     }
@@ -683,7 +715,7 @@ function chooseAgentTarget(agent, dayStats) {
     }
 
     if (shouldShop) {
-        const f = cityState.layout.firms[(agent.id * 3 + cityState.currentDay) % cityState.layout.firms.length];
+        const f = cityState.layout.firms[(agent.id * 3 + cityState.currentMonth) % cityState.layout.firms.length];
         agent.target = f ? f.entrance : agent.home.entrance;
         return;
     }
@@ -696,7 +728,7 @@ function chooseAgentTarget(agent, dayStats) {
     agent.movingToWork = !agent.movingToWork;
 }
 
-function updateAgents(dt, dayStats) {
+function updateAgents(dt, monthStats) {
     for (const agent of cityState.agents) {
         const dx = agent.target.x - agent.x;
         const dy = agent.target.y - agent.y;
@@ -705,7 +737,7 @@ function updateAgents(dt, dayStats) {
         if (distance < 4) {
             agent.idleTimer -= dt;
             if (agent.idleTimer <= 0) {
-                chooseAgentTarget(agent, dayStats);
+                chooseAgentTarget(agent, monthStats);
                 agent.idleTimer = 0.3 + Math.random() * 0.8;
             }
             continue;
@@ -948,15 +980,15 @@ function renderCityFrame() {
     ctx.restore();
 }
 
-function updateCityStatsBar(dayStats) {
+function updateCityStatsBar(monthStats) {
     const bar = document.getElementById('city-stats-bar');
     bar.innerHTML = `
-        <div class="city-stat">GDP<strong>${Math.round(dayStats.gdp).toLocaleString()}</strong></div>
-        <div class="city-stat">Unemployment<strong>${(dayStats.unemployment_rate * 100).toFixed(1)}%</strong></div>
-        <div class="city-stat">Gini<strong>${dayStats.gini_coefficient.toFixed(3)}</strong></div>
+        <div class="city-stat">GDP<strong>${Math.round(monthStats.gdp).toLocaleString()}</strong></div>
+        <div class="city-stat">Unemployment<strong>${(monthStats.unemployment_rate * 100).toFixed(1)}%</strong></div>
+        <div class="city-stat">Gini<strong>${monthStats.gini_coefficient.toFixed(3)}</strong></div>
     `;
-    const totalDays = cityState.data.daily_stats.length;
-    document.getElementById('city-day-counter').textContent = `Day ${cityState.currentDay + 1} / ${totalDays}`;
+    const totalMonths = cityState.data.monthly_stats.length;
+    document.getElementById('city-month-counter').textContent = `Month ${cityState.currentMonth + 1} / ${totalMonths}`;
 }
 
 function cityTick(ts) {
@@ -965,22 +997,22 @@ function cityTick(ts) {
     const dt = Math.min(0.05, (ts - cityState.lastTs) / 1000);
     cityState.lastTs = ts;
 
-    const totalDays = cityState.data.daily_stats.length;
+    const totalMonths = cityState.data.monthly_stats.length;
     if (cityState.playing) {
         const speed = CITY_SPEEDS[cityState.speedIndex];
-        cityState.dayFloat += dt * speed * 0.6;
-        if (cityState.dayFloat >= totalDays - 1) {
-            cityState.dayFloat = totalDays - 1;
+        cityState.monthFloat += dt * speed * 0.6;
+        if (cityState.monthFloat >= totalMonths - 1) {
+            cityState.monthFloat = totalMonths - 1;
             cityState.playing = false;
             document.getElementById('city-play-toggle').textContent = 'Play';
         }
     }
 
-    const day = Math.floor(cityState.dayFloat);
-    if (day !== cityState.currentDay) {
-        cityState.currentDay = day;
-        cityState.currentStats = cityState.data.daily_stats[day];
-        updateAgentRoles(cityState.currentStats, day + 1);
+    const month = Math.floor(cityState.monthFloat);
+    if (month !== cityState.currentMonth) {
+        cityState.currentMonth = month;
+        cityState.currentStats = cityState.data.monthly_stats[month];
+        updateAgentRoles(cityState.currentStats, month + 1);
         updateCityStatsBar(cityState.currentStats);
     }
 
@@ -989,14 +1021,14 @@ function cityTick(ts) {
     cityState.rafId = requestAnimationFrame(cityTick);
 }
 
-function startCityPlayback(data, resetDay) {
+function startCityPlayback(data, resetMonth) {
     ensureCityControls();
     cityState.data = data;
     cityState.layout = generateCityLayout(data.config);
     cityState.agents = spawnAgents(data.config, cityState.layout);
-    cityState.currentDay = 0;
-    cityState.dayFloat = resetDay ? 0 : Math.min(cityState.dayFloat, data.daily_stats.length - 1);
-    cityState.currentStats = data.daily_stats[Math.floor(cityState.dayFloat)] || data.daily_stats[0];
+    cityState.currentMonth = 0;
+    cityState.monthFloat = resetMonth ? 0 : Math.min(cityState.monthFloat, data.monthly_stats.length - 1);
+    cityState.currentStats = data.monthly_stats[Math.floor(cityState.monthFloat)] || data.monthly_stats[0];
     cityState.playing = true;
     document.getElementById('city-play-toggle').textContent = 'Pause';
     updateAgentRoles(cityState.currentStats, 1);
@@ -1028,7 +1060,7 @@ async function runSimulation() {
         renderResults(data);
         if (activeTab === 'city') startCityPlayback(data, true);
         setStatus(
-            `Done — ${data.num_days} days, ${data.final_journal_size} journal entries`,
+            `Done — ${data.num_months} months, ${data.final_journal_size} journal entries`,
             'done'
         );
 
@@ -1108,7 +1140,7 @@ function renderResults(data, tabToRender = activeTab) {
     document.getElementById('empty-state').style.display = 'none';
     document.getElementById('results').style.display = 'block';
 
-    const stats = data.daily_stats;
+    const stats = data.monthly_stats;
     const last = stats[stats.length - 1];
 
     // KPIs
@@ -1116,7 +1148,7 @@ function renderResults(data, tabToRender = activeTab) {
     kpis.innerHTML = `
         <div class="kpi">
             <div class="value">${last.gdp.toFixed(0)}</div>
-            <div class="label">Daily GDP</div>
+            <div class="label">Monthly GDP</div>
         </div>
         <div class="kpi">
             <div class="value">${(last.unemployment_rate * 100).toFixed(1)}%</div>
@@ -1129,6 +1161,14 @@ function renderResults(data, tabToRender = activeTab) {
         <div class="kpi">
             <div class="value">${last.gini_coefficient.toFixed(3)}</div>
             <div class="label">Gini Index</div>
+        </div>
+        <div class="kpi">
+            <div class="value">${last.population}</div>
+            <div class="label">Population</div>
+        </div>
+        <div class="kpi">
+            <div class="value">${(last.bond_rate * 100).toFixed(2)}%</div>
+            <div class="label">Bond Rate</div>
         </div>
     `;
 
@@ -1143,11 +1183,11 @@ function renderCharts(data, tab) {
     const container = document.getElementById('charts');
     container.innerHTML = '';
 
-    const stats = data.daily_stats;
-    const days = stats.map(s => s.day);
+    const stats = data.monthly_stats;
+    const months = stats.map(s => s.month);
 
-    const baseStats = (baselineData && baselineData !== data) ? baselineData.daily_stats : null;
-    const baseDays = baseStats ? baseStats.map(s => s.day) : null;
+    const baseStats = (baselineData && baselineData !== data) ? baselineData.monthly_stats : null;
+    const baseMonths = baseStats ? baseStats.map(s => s.month) : null;
 
     function addChart(title, traces, fullWidth) {
         const div = document.createElement('div');
@@ -1157,13 +1197,13 @@ function renderCharts(data, tab) {
         const chartDiv = div.querySelector('div:last-child');
 
         // Add baseline comparison traces
-        if (baseStats && baseDays) {
+        if (baseStats && baseMonths) {
             const baseTraces = [];
             for (const t of traces) {
                 const fieldName = t._field;
                 if (fieldName) {
                     baseTraces.push({
-                        x: baseDays,
+                        x: baseMonths,
                         y: baseStats.map(s => s[fieldName]),
                         name: t.name + ' (baseline)',
                         line: { dash: 'dash', width: 1, color: t.line?.color || '#555' },
@@ -1182,14 +1222,14 @@ function renderCharts(data, tab) {
 
     function ts(field, name, color) {
         return {
-            x: days, y: stats.map(s => s[field]),
+            x: months, y: stats.map(s => s[field]),
             name, line: { color, width: 2 },
             _field: field,
         };
     }
 
     if (tab === 'macro') {
-        addChart('Daily GDP', [ts('gdp', 'GDP', '#6c8cff')]);
+        addChart('Monthly GDP', [ts('gdp', 'GDP', '#6c8cff')]);
         addChart('Unemployment Rate', [ts('unemployment_rate', 'Unemployment', '#ff6c6c')]);
         addChart('Average Wage', [ts('avg_wage', 'Wage', '#4ecdc4')]);
         addChart('Money Supply (Bank Deposits)', [ts('total_money_supply', 'M1', '#ffe66d')]);
@@ -1211,7 +1251,7 @@ function renderCharts(data, tab) {
         addChart('Top 1% Income Share', [ts('top1_pct_income_share', 'Top 1%', '#ff6c6c')]);
         addChart('Bottom 50% Income Share', [ts('bottom50_pct_income_share', 'Bottom 50%', '#4ecdc4')]);
     } else if (tab === 'sectors') {
-        addChart('Government Deficit (daily)', [ts('govt_deficit', 'Deficit', '#ff6c6c')]);
+        addChart('Government Deficit (monthly)', [ts('govt_deficit', 'Deficit', '#ff6c6c')]);
         addChart('Sector Balances', [
             ts('private_sector_balance', 'Private', '#4ecdc4'),
             ts('govt_sector_balance', 'Government', '#ff6c6c'),
@@ -1230,7 +1270,31 @@ function renderCharts(data, tab) {
             ts('shelter_produced', 'Produced', '#6c8cff'),
             ts('shelter_sold', 'Sold', '#4ecdc4'),
         ]);
-        addChart('Journal Entries / Day', [ts('journal_entries_today', 'Entries', '#8b8fa3')]);
+        addChart('Journal Entries / Month', [ts('journal_entries_this_month', 'Entries', '#8b8fa3')]);
+    } else if (tab === 'demographics') {
+        addChart('Population', [ts('population', 'Population', '#6c8cff')]);
+        addChart('Population by Stage', [
+            ts('num_children', 'Children', '#4ecdc4'),
+            ts('num_adults', 'Adults', '#6c8cff'),
+            ts('num_retirees', 'Retirees', '#ffe66d'),
+        ]);
+        addChart('Births & Deaths', [
+            ts('births', 'Births', '#4ecdc4'),
+            ts('deaths', 'Deaths', '#ff6c6c'),
+        ]);
+        addChart('Dependency Ratio', [ts('dependency_ratio', 'Dependency Ratio', '#ff6c6c')]);
+    } else if (tab === 'healthcare') {
+        addChart('Healthcare Capacity vs Demand', [
+            ts('healthcare_capacity', 'Capacity', '#4ecdc4'),
+            ts('elder_visits_needed', 'Demand', '#ff6c6c'),
+        ]);
+        addChart('Healthcare Shortage', [ts('healthcare_shortage', 'Shortage', '#ff6c6c')]);
+        addChart('Healthcare Govt Spending', [ts('healthcare_govt_spending', 'Govt Spending', '#6c8cff')]);
+    } else if (tab === 'bonds') {
+        addChart('Bond Rate', [ts('bond_rate', 'Bond Rate', '#6c8cff')]);
+        addChart('Bonds Outstanding', [ts('total_bonds_outstanding', 'Outstanding', '#ffe66d')]);
+        addChart('Bond Interest Paid', [ts('bond_interest_paid', 'Interest Paid', '#ff6c6c')]);
+        addChart('Bonds Issued (monthly)', [ts('bonds_issued', 'Issued', '#4ecdc4')]);
     }
 }
 
