@@ -374,8 +374,111 @@
                     <input type="number" id="num_shelter_firms" value="0" min="0" max="20" title="0 = govt provides shelter">
                 </div>
                 <div>
+                    <label>Profit Dist Rate</label>
+                    <input type="number" id="profit_distribution_rate" value="0.50" step="0.05" min="0" max="1.0">
+                </div>
+            </div>
+            <div class="param-row">
+                <div>
+                    <label>Target Inv Months</label>
+                    <input type="number" id="target_inventory_months" value="2.0" step="0.5" min="0.5" max="12">
+                </div>
+                <div>
+                    <label>Interest Rate</label>
+                    <input type="number" id="interest_rate" value="0.05" step="0.01" min="0" max="0.5">
+                </div>
+            </div>
+
+            <h3>Wages &amp; Prices</h3>
+            <div class="param-row">
+                <div>
                     <label>Init Wage</label>
                     <input type="number" id="initial_wage" value="2400" min="10" max="15000">
+                </div>
+                <div>
+                    <label>Min Wage</label>
+                    <input type="number" id="min_wage" value="600" min="0" max="10000">
+                </div>
+            </div>
+            <div class="param-row">
+                <div>
+                    <label>Wage Adj Speed</label>
+                    <input type="number" id="wage_adjustment_speed" value="0.06" step="0.01" min="0" max="0.5">
+                </div>
+                <div>
+                    <label>Price Adj Speed</label>
+                    <input type="number" id="price_adjustment_speed" value="0.10" step="0.01" min="0" max="0.5">
+                </div>
+            </div>
+            <div class="param-row">
+                <div>
+                    <label>Init Food Price</label>
+                    <input type="number" id="initial_food_price" value="150" min="1" max="10000">
+                </div>
+                <div>
+                    <label>Init Energy Price</label>
+                    <input type="number" id="initial_energy_price" value="120" min="1" max="10000">
+                </div>
+            </div>
+            <div class="param-row">
+                <div>
+                    <label>Shelter Fixed Price</label>
+                    <input type="number" id="shelter_fixed_price" value="720" min="0" max="10000">
+                </div>
+                <div></div>
+            </div>
+
+            <h3>Production</h3>
+            <div class="param-row">
+                <div>
+                    <label>Food Productivity</label>
+                    <input type="number" id="food_productivity" value="6.0" step="0.5" min="0.1" max="50">
+                </div>
+                <div>
+                    <label>Energy Productivity</label>
+                    <input type="number" id="energy_productivity" value="5.0" step="0.5" min="0.1" max="50">
+                </div>
+            </div>
+            <div class="param-row">
+                <div>
+                    <label>HC Productivity</label>
+                    <input type="number" id="healthcare_productivity" value="5.0" step="0.5" min="0.1" max="50">
+                </div>
+                <div>
+                    <label>Shelter Productivity</label>
+                    <input type="number" id="shelter_productivity" value="0.8" step="0.1" min="0.1" max="50">
+                </div>
+            </div>
+            <div class="param-row">
+                <div>
+                    <label>Labor Share</label>
+                    <input type="number" id="labor_share" value="0.7" step="0.05" min="0.1" max="0.95">
+                </div>
+                <div>
+                    <label>Capital Share</label>
+                    <input type="number" id="capital_share" value="0.3" step="0.05" min="0.05" max="0.9">
+                </div>
+            </div>
+
+            <h3>Consumption</h3>
+            <div class="param-row">
+                <div>
+                    <label>Food Need</label>
+                    <input type="number" id="food_need" value="1.0" step="0.1" min="0.1" max="10">
+                </div>
+                <div>
+                    <label>Energy Need</label>
+                    <input type="number" id="energy_need" value="1.0" step="0.1" min="0.1" max="10">
+                </div>
+            </div>
+            <div class="param-row">
+                <div>
+                    <label>Shelter Need</label>
+                    <input type="number" id="shelter_need" value="1.0" step="0.1" min="0.1" max="10">
+                </div>
+                <div>
+                    <label>Child Food Frac</label>
+                    <input type="number" id="child_food_fraction" value="0.5" step="0.1" min="0" max="1.0">
                 </div>
             </div>
 
@@ -396,8 +499,8 @@
                     <input type="number" id="monthly_govt_transfer" value="300" min="0" max="6000">
                 </div>
                 <div>
-                    <label>Spending/mo</label>
-                    <input type="number" id="monthly_govt_spending" value="150000" min="0" max="3000000">
+                    <label>Spending/capita</label>
+                    <input type="number" id="govt_spending_per_capita" value="150" min="0" max="10000">
                 </div>
             </div>
 
@@ -412,6 +515,23 @@
                     <input type="number" id="pension_replacement_rate" value="0.50" step="0.05" min="0" max="1.0">
                 </div>
             </div>
+            <div class="param-row">
+                <div>
+                    <label>Mortality Start Age</label>
+                    <input type="number" id="mortality_start_age" value="72" min="60" max="100">
+                </div>
+                <div>
+                    <label>Target Death Age</label>
+                    <input type="number" id="target_death_age" value="80" min="65" max="120">
+                </div>
+            </div>
+            <div class="param-row">
+                <div>
+                    <label>Fertility Rate/yr</label>
+                    <input type="number" id="fertility_rate_annual" value="0.01" step="0.005" min="0" max="0.1">
+                </div>
+                <div></div>
+            </div>
 
             <h3>Healthcare</h3>
             <div class="param-row">
@@ -423,6 +543,25 @@
                     <label>Elder HC Mo Cost</label>
                     <input type="number" id="elder_healthcare_monthly_cost" value="500" min="0" max="5000">
                 </div>
+            </div>
+
+            <h3>Bonds</h3>
+            <div class="param-row">
+                <div>
+                    <label>Bond Duration (mo)</label>
+                    <input type="number" id="bond_duration_months" value="120" min="6" max="600">
+                </div>
+                <div>
+                    <label>Bond Rate Min</label>
+                    <input type="number" id="bond_rate_min" value="0.005" step="0.005" min="0" max="0.5">
+                </div>
+            </div>
+            <div class="param-row">
+                <div>
+                    <label>Bond Rate Max</label>
+                    <input type="number" id="bond_rate_max" value="0.15" step="0.01" min="0.01" max="1.0">
+                </div>
+                <div></div>
             </div>
 
             <h3>Scenario Shock</h3>
@@ -531,22 +670,57 @@ const cityState = {
 
 function getConfig() {
     return {
+        // General
         num_months: +document.getElementById('num_months').value,
         seed: +document.getElementById('seed').value,
+        // Population
         num_individuals: +document.getElementById('num_individuals').value,
         owner_fraction: +document.getElementById('owner_fraction').value,
+        // Firms
         num_food_firms: +document.getElementById('num_food_firms').value,
         num_energy_firms: +document.getElementById('num_energy_firms').value,
         num_shelter_firms: +document.getElementById('num_shelter_firms').value,
+        profit_distribution_rate: +document.getElementById('profit_distribution_rate').value,
+        target_inventory_months: +document.getElementById('target_inventory_months').value,
+        interest_rate: +document.getElementById('interest_rate').value,
+        // Wages & Prices
         initial_wage: +document.getElementById('initial_wage').value,
+        min_wage: +document.getElementById('min_wage').value,
+        wage_adjustment_speed: +document.getElementById('wage_adjustment_speed').value,
+        price_adjustment_speed: +document.getElementById('price_adjustment_speed').value,
+        initial_food_price: +document.getElementById('initial_food_price').value,
+        initial_energy_price: +document.getElementById('initial_energy_price').value,
+        shelter_fixed_price: +document.getElementById('shelter_fixed_price').value,
+        // Production
+        food_productivity: +document.getElementById('food_productivity').value,
+        energy_productivity: +document.getElementById('energy_productivity').value,
+        healthcare_productivity: +document.getElementById('healthcare_productivity').value,
+        shelter_productivity: +document.getElementById('shelter_productivity').value,
+        labor_share: +document.getElementById('labor_share').value,
+        capital_share: +document.getElementById('capital_share').value,
+        // Consumption
+        food_need: +document.getElementById('food_need').value,
+        energy_need: +document.getElementById('energy_need').value,
+        shelter_need: +document.getElementById('shelter_need').value,
+        child_food_fraction: +document.getElementById('child_food_fraction').value,
+        // Government
         income_tax_rate: +document.getElementById('income_tax_rate').value,
         sales_tax_rate: +document.getElementById('sales_tax_rate').value,
         monthly_govt_transfer: +document.getElementById('monthly_govt_transfer').value,
-        monthly_govt_spending: +document.getElementById('monthly_govt_spending').value,
+        govt_spending_per_capita: +document.getElementById('govt_spending_per_capita').value,
+        // Demographics
         retirement_age: +document.getElementById('retirement_age').value,
         pension_replacement_rate: +document.getElementById('pension_replacement_rate').value,
+        mortality_start_age: +document.getElementById('mortality_start_age').value,
+        target_death_age: +document.getElementById('target_death_age').value,
+        fertility_rate_annual: +document.getElementById('fertility_rate_annual').value,
+        // Healthcare
         num_healthcare_firms: +document.getElementById('num_healthcare_firms').value,
         elder_healthcare_monthly_cost: +document.getElementById('elder_healthcare_monthly_cost').value,
+        // Bonds
+        bond_duration_months: +document.getElementById('bond_duration_months').value,
+        bond_rate_min: +document.getElementById('bond_rate_min').value,
+        bond_rate_max: +document.getElementById('bond_rate_max').value,
     };
 }
 
