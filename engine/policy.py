@@ -139,6 +139,8 @@ def government_operations(
     stats: dict[str, float] = {}
     total_tax = 0.0
     total_transfers = 0.0
+    transfers_to_households = 0.0
+    govt_spending_on_firms = 0.0
 
     # Build a lookup for firms by id (avoid O(n) search per individual)
     firm_by_id = {f.id: f for f in firms}
@@ -164,8 +166,9 @@ def government_operations(
         amount = config.daily_govt_transfer
         post_transfer_payment(ledger, day, govt, bank, ind, amount)
         total_transfers += amount
+        transfers_to_households += amount
 
-    # General government spending
+    # General government spending (purchases from firms)
     if config.daily_govt_spending > 0 and firms:
         per_firm = config.daily_govt_spending / len(firms)
         for firm in firms:
@@ -174,9 +177,12 @@ def government_operations(
                 f"Govt spending: {firm.id}",
             )
             total_transfers += per_firm
+            govt_spending_on_firms += per_firm
 
     stats["total_tax_collected"] = total_tax
     stats["total_govt_transfers"] = total_transfers
+    stats["transfers_to_households"] = transfers_to_households
+    stats["govt_spending_on_firms"] = govt_spending_on_firms
     stats["govt_deficit"] = total_transfers - total_tax
     return stats
 

@@ -181,6 +181,7 @@ def clear_labor_market(
 
     worker_idx = 0
     total_hired = 0
+    total_wages = 0.0
     for firm, demand in labor_demands:
         hired = 0
         while hired < demand and worker_idx < len(workers):
@@ -191,6 +192,7 @@ def clear_labor_market(
             firm.num_workers += 1
             hired += 1
             total_hired += 1
+            total_wages += firm.wage_offer
             # Post wage payment
             post_wage_payment(ledger, day, bank, firm, w, firm.wage_offer)
 
@@ -201,6 +203,7 @@ def clear_labor_market(
         "total_hired": total_hired,
         "total_workers": total_workers,
         "unemployment_rate": unemployment_rate,
+        "total_wages": total_wages,
     }
 
 
@@ -251,6 +254,9 @@ def clear_goods_market(
 
     total_sales: dict[str, float] = {g.value: 0.0 for g in GoodType}
     total_revenue: dict[str, float] = {g.value: 0.0 for g in GoodType}
+    worker_consumption = 0.0
+    capitalist_consumption = 0.0
+    total_sales_tax = 0.0
 
     # Track per-firm daily sales for EMA (accumulated, not per-transaction)
     firm_day_sales: dict[str, float] = {f.id: 0.0 for f in firms}
@@ -300,6 +306,7 @@ def clear_goods_market(
                     tax = min(tax, firm_cash)
                     if tax > 0.01:
                         post_sales_tax(ledger, day, govt, bank, firm, tax)
+                        total_sales_tax += tax
 
                 remaining_need -= qty
                 cash -= cost
@@ -307,6 +314,10 @@ def clear_goods_market(
                 total_revenue[good_type.value] += cost
                 firm_day_sales[firm.id] += qty
                 firm_day_revenue[firm.id] += cost
+                if ind.is_owner:
+                    capitalist_consumption += cost
+                else:
+                    worker_consumption += cost
 
     # Update firm EMAs with daily totals (not per-transaction)
     for firm in firms:
@@ -321,6 +332,10 @@ def clear_goods_market(
             stats[f"{g.value}_avg_price"] = sum(f.price for f in gfirms) / len(gfirms)
         else:
             stats[f"{g.value}_avg_price"] = 0.0
+
+    stats["worker_consumption"] = worker_consumption
+    stats["capitalist_consumption"] = capitalist_consumption
+    stats["total_sales_tax"] = total_sales_tax
 
     return stats
 

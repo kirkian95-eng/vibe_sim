@@ -51,6 +51,15 @@ class DailyStats:
     govt_sector_balance: float = 0.0
     bank_sector_balance: float = 0.0
 
+    # Kalecki profits identity components
+    # Π = I + GovtDeficit + C_k - S_w  (closed economy)
+    aggregate_profits: float = 0.0  # firm revenue - firm costs (daily)
+    total_wages: float = 0.0
+    worker_saving: float = 0.0
+    capitalist_consumption: float = 0.0
+    investment: float = 0.0  # zero until capital accumulation is added
+    kalecki_residual: float = 0.0  # should be ~0 if identity holds
+
     # Accounting
     journal_entries_today: int = 0
     all_balanced: bool = True
@@ -121,6 +130,35 @@ def collect_daily_stats(
     wages = [f.wage_offer for f in firms]
     avg_wage = sum(wages) / len(wages) if wages else 0
 
+    # ── Kalecki profits identity ──────────────────────────────────
+    # In this closed economy with no investment:
+    #   Aggregate Profits = Consumer Spending + Govt Purchases - Wages - Sales Tax
+    # Equivalently (Levy-Kalecki):
+    #   Profits = Investment + Govt Deficit + Capitalist Consumption - Worker Saving
+    #
+    total_wages_paid = labor_stats.get("total_wages", 0.0)
+    consumer_spending = gdp  # all goods market revenue
+    govt_purchases = govt_stats.get("govt_spending_on_firms", 0.0)
+    sales_tax = goods_stats.get("total_sales_tax", 0.0)
+    income_tax = govt_stats.get("total_tax_collected", 0.0)
+    transfers = govt_stats.get("transfers_to_households", 0.0)
+    cap_consumption = goods_stats.get("capitalist_consumption", 0.0)
+    wkr_consumption = goods_stats.get("worker_consumption", 0.0)
+
+    # Profits from the income side: total firm revenue minus total firm costs
+    aggregate_profits = (consumer_spending + govt_purchases) - (total_wages_paid + sales_tax)
+
+    # Worker saving: wages + transfers - income tax - worker consumption
+    worker_saving = total_wages_paid + transfers - income_tax - wkr_consumption
+
+    # Full government deficit including sales tax
+    full_govt_deficit = (govt_purchases + transfers) - (income_tax + sales_tax)
+
+    # Kalecki identity: Π = I + GovtDeficit + C_k - S_w
+    # Residual should be zero (accounting identity)
+    investment = 0.0
+    kalecki_residual = aggregate_profits - (investment + full_govt_deficit + cap_consumption - worker_saving)
+
     # Money supply = total deposits
     money_supply = ledger.account_balance(f"{bank_id}:deposits")
 
@@ -141,7 +179,7 @@ def collect_daily_stats(
         unemployment_rate=labor_stats["unemployment_rate"],
         total_employment=int(labor_stats["total_hired"]),
         avg_wage=avg_wage,
-        govt_deficit=govt_stats["govt_deficit"],
+        govt_deficit=full_govt_deficit,
         total_money_supply=money_supply,
         food_price=goods_stats.get("food_avg_price", 0),
         energy_price=goods_stats.get("energy_avg_price", 0),
@@ -160,6 +198,12 @@ def collect_daily_stats(
         private_sector_balance=private_balance,
         govt_sector_balance=govt_balance,
         bank_sector_balance=bank_balance,
+        aggregate_profits=aggregate_profits,
+        total_wages=total_wages_paid,
+        worker_saving=worker_saving,
+        capitalist_consumption=cap_consumption,
+        investment=investment,
+        kalecki_residual=kalecki_residual,
         journal_entries_today=journal_today,
         # Only check today's new entries (not the entire journal every day)
         all_balanced=ledger.check_entries_balanced_from(journal_before),
