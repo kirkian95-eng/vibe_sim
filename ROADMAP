@@ -1,0 +1,24 @@
+future ideas
+
+v0.2 - ages and stages (LIVE)
+   add age variable for individuals
+   create children and retirees
+   add healthcare insitution 
+
+v0.21 - graphs for nerds
+   add dashboard for tracking CPI, unemployment, GDP, etc.
+
+v0.3 - shelter overhaul
+   add housing market and property development
+
+v0.31 - firms overhaul
+   add stock market, insolvency and other firm behaviors. 
+
+v0.4 - "fiscal vs monetary"
+   add fiscal and monerary policy autmated stabiliziing behaviors to the government and central bank
+   create "misery" index based on unemployment, etc. which controls fiscal policy 
+   create central bank with dual mandate which independently sets policy rates 
+
+v0.5 - "trade wars"
+   add second country which can trade energy and food
+   add competitive advantages, transportation costs, and tariffs
