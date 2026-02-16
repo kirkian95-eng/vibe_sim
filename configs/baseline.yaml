@@ -27,7 +27,8 @@ capital_share: 0.3
 initial_firm_cash: 50000.0
 initial_firm_capital: 100.0
 initial_firm_inventory: 50.0
-initial_individual_cash: 500.0
+initial_individual_cash: 500.0  # flat fallback; age-based used at creation
+initial_savings_at_retirement: 40000.0  # target bank deposits at age 65
 initial_bank_reserves: 500000.0
 
 # Consumption needs (units/person/month)
@@ -40,6 +41,8 @@ child_food_fraction: 0.5
 initial_food_price: 150.0
 initial_energy_price: 120.0
 initial_shelter_price: 600.0
+# Shelter: temporarily govt-provided at fixed price (see markets.py TRADEOFF)
+shelter_fixed_price: 600.0
 
 # Wages (monthly)
 initial_wage: 2400.0

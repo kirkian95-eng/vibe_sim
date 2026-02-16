@@ -23,6 +23,7 @@ Orchestrates the monthly cycle:
 from __future__ import annotations
 
 import dataclasses as dc
+import math
 import random
 import time
 from collections.abc import Callable
@@ -55,6 +56,22 @@ from .policy import (
     post_government_spending,
 )
 from .shocks import Shock
+
+
+def _initial_cash_for_age(age_months: int, target_at_65: float) -> float:
+    """
+    Age-proportional initial savings: ~$1 at 18, logarithmic growth to target at 65.
+
+    Retirees need prior savings; otherwise they start with $0 and run out of money.
+    years_since_18 = max(0, (age_months - 216) / 12)
+    amount = 1 + (target_at_65 - 1) * ln(1 + years_since_18) / ln(48)
+    """
+    if age_months < 216:  # Under 18
+        return 1.0
+    years_since_18 = (age_months - 216) / 12.0
+    # ln(48) ≈ 3.87 is the value at 65 (47 years of accumulation)
+    scale = (target_at_65 - 1.0) / math.log(48)
+    return 1.0 + scale * math.log(1.0 + years_since_18)
 
 
 class Simulation:
@@ -105,15 +122,23 @@ class Simulation:
         """
         Inject initial money into the economy via government spending.
         Money can only exist if the government spends it into existence.
+
+        Individuals receive age-proportional initial savings: ~$1 at age 18,
+        growing logarithmically to initial_savings_at_retirement at age 65.
+        This funds retirees who would otherwise start with $0 and run out of money.
         """
         cfg = self.config
 
-        # Government spending creates initial money for individuals
+        # Government spending creates initial money for individuals (age-proportional)
         for ind in self.individuals:
             if ind.alive:
+                amount = _initial_cash_for_age(
+                    ind.age_months,
+                    cfg.initial_savings_at_retirement,
+                )
                 post_government_spending(
                     self.ledger, 0, self.govt, self.bank, ind.id,
-                    cfg.initial_individual_cash,
+                    amount,
                     f"Bootstrap: initial cash for {ind.id}",
                 )
 

@@ -14,6 +14,7 @@ from .config import SimConfig
 from .ledger import Ledger
 from .policy import (
     post_sales_tax,
+    post_shelter_purchase_from_govt,
 )
 from .production import cobb_douglas, desired_labor, firm_target_output
 
@@ -285,9 +286,57 @@ def clear_goods_market(
     order = list(alive_individuals)
     rng.shuffle(order)
 
+    # TRADEOFF: Shelter is temporarily an infinitely-available good at fixed price.
+    # Individuals buy from government; money is destroyed like tax. To revert to
+    # market-based shelter with supply-constrained firms, restore the shelter firm
+    # loop below and remove the shelter govt branch. See policy.post_shelter_purchase_from_govt.
+    shelter_fixed_price = config.shelter_fixed_price
+
     for good_type in [GoodType.FOOD, GoodType.ENERGY, GoodType.SHELTER]:
         need_base = needs[good_type.value]
         available_firms = firms_by_good[good_type]
+
+        # Shelter: bypass firms, use govt provision (infinite supply, fixed price)
+        if good_type == GoodType.SHELTER:
+            for ind in order:
+                need = need_base if ind.life_stage != LifeStage.CHILD else need_base
+                payer = None
+                for pid in ind.parent_ids:
+                    p = ind_by_id.get(pid)
+                    if p and p.alive:
+                        payer = p
+                        break
+                if ind.life_stage != LifeStage.CHILD:
+                    payer = ind
+                if payer is None:
+                    continue
+                payer_cash_acct = f"{payer.id}:cash"
+                cash = ledger.account_balance(payer_cash_acct)
+                if cash <= 0:
+                    continue
+                qty = min(need, cash / shelter_fixed_price)
+                if qty <= 0.001:
+                    continue
+                cost = qty * shelter_fixed_price
+                # Guardian pays for child: transfer from guardian to child (balance sheet neutral)
+                if payer.id != ind.id and cost > 0:
+                    ledger.post(month, f"Guardian shelter transfer: {payer.id} -> {ind.id}", [
+                        (f"{payer.id}:cash", 0, cost),
+                        (f"{payer.id}:equity", cost, 0),
+                        (f"{ind.id}:cash", cost, 0),
+                        (f"{ind.id}:transfer_income", 0, cost),
+                    ])
+                post_shelter_purchase_from_govt(
+                    ledger, month, ind, bank, govt, qty, shelter_fixed_price
+                )
+                total_sales[good_type.value] += qty
+                total_revenue[good_type.value] += cost
+                if ind.is_owner:
+                    capitalist_consumption += cost
+                else:
+                    worker_consumption += cost
+            continue
+
         if not available_firms:
             continue
 
@@ -335,27 +384,9 @@ def clear_goods_market(
                 if qty <= 0.001:
                     continue
 
-                # The buyer (for inventory) is the individual; payment from payer
-                # For children, payer is the guardian but the child gets the goods
                 post_goods_sale(ledger, month, bank, firm, ind, good_type, qty, firm.price)
 
-                # If child, the cash came from guardian — need to handle the accounting
-                # Actually, post_goods_sale debits the BUYER's cash. If the buyer is
-                # the child, the child's cash is debited. But the child may not have cash.
-                # We need to handle this differently for children.
-                #
-                # Simpler approach: for children, the guardian buys on their behalf.
-                # The goods go to the child's inventory but cash comes from guardian.
-                # This is already handled above: we check guardian's cash.
-                # But post_goods_sale debits child's cash, which is wrong.
-                #
-                # Fix: for children, transfer cash from guardian to child first,
-                # then let the sale proceed normally.
                 if ind.life_stage == LifeStage.CHILD and payer is not None and payer.id != ind.id:
-                    # The sale already debited child's cash and credited firm.
-                    # We need to reimburse by transferring from guardian to child.
-                    # This happens implicitly because post_goods_sale already ran.
-                    # The child's cash may go negative (bad). Let's fix with a pre-transfer.
                     pass  # We'll handle this below
 
                 # Sales tax
@@ -388,11 +419,15 @@ def clear_goods_market(
     for g in GOODS:
         stats[f"{g.value}_quantity_sold"] = total_sales[g.value]
         stats[f"{g.value}_revenue"] = total_revenue[g.value]
-        gfirms = firms_by_good[g]
-        if gfirms:
-            stats[f"{g.value}_avg_price"] = sum(f.price for f in gfirms) / len(gfirms)
+        if g == GoodType.SHELTER:
+            # Shelter is govt-provided at fixed price (see TRADEOFF above)
+            stats[f"{g.value}_avg_price"] = shelter_fixed_price
         else:
-            stats[f"{g.value}_avg_price"] = 0.0
+            gfirms = firms_by_good.get(g, [])
+            if gfirms:
+                stats[f"{g.value}_avg_price"] = sum(f.price for f in gfirms) / len(gfirms)
+            else:
+                stats[f"{g.value}_avg_price"] = 0.0
 
     stats["worker_consumption"] = worker_consumption
     stats["capitalist_consumption"] = capitalist_consumption
