@@ -446,13 +446,15 @@ def government_operations(
     total_tax = 0.0
     total_transfers = 0.0
 
+    # Build a lookup for firms by id (avoid O(n) search per individual)
+    firm_by_id = {f.id: f for f in firms}
+
     # Income tax on wages (collected from individuals with labor income)
     for ind in individuals:
         if ind.employed:
-            income = ledger.account_balance(f"{ind.id}:labor_income")
             # Tax is on today's wages (rough: use wage of employer)
             if ind.employer_id:
-                employer = next((f for f in firms if f.id == ind.employer_id), None)
+                employer = firm_by_id.get(ind.employer_id)
                 if employer:
                     tax = employer.wage_offer * config.income_tax_rate
                     ind_cash = ledger.account_balance(f"{ind.id}:cash")
@@ -503,10 +505,11 @@ def firm_profit_distribution(
         return 0.0
 
     total_distributed = 0.0
+    ind_by_id = {i.id: i for i in individuals}
     for firm in firms:
         if not firm.owner_id:
             continue
-        owner = next((i for i in individuals if i.id == firm.owner_id), None)
+        owner = ind_by_id.get(firm.owner_id)
         if not owner:
             continue
 

@@ -107,6 +107,7 @@ class Ledger:
 
     def __init__(self):
         self._accounts: Dict[str, Account] = {}
+        self._actor_accounts: Dict[str, List[Account]] = {}  # actor_id -> accounts
         self._journal: List[JournalEntry] = []
         self._next_entry_id: int = 1
 
@@ -125,6 +126,9 @@ class Ledger:
             account_type=account_type,
         )
         self._accounts[account_id] = acct
+        if actor_id not in self._actor_accounts:
+            self._actor_accounts[actor_id] = []
+        self._actor_accounts[actor_id].append(acct)
         return acct
 
     def get_account(self, account_id: str) -> Account:
@@ -137,7 +141,7 @@ class Ledger:
         return self.get_account(account_id).balance
 
     def actor_accounts(self, actor_id: str) -> List[Account]:
-        return [a for a in self._accounts.values() if a.actor_id == actor_id]
+        return self._actor_accounts.get(actor_id, [])
 
     # ── Journal posting ─────────────────────────────────────────────
 
@@ -251,6 +255,13 @@ class Ledger:
     def check_all_entries_balanced(self) -> bool:
         for entry in self._journal:
             if not entry.is_balanced():
+                return False
+        return True
+
+    def check_entries_balanced_from(self, start_idx: int) -> bool:
+        """Check balance only for entries from start_idx onward (fast daily check)."""
+        for i in range(start_idx, len(self._journal)):
+            if not self._journal[i].is_balanced():
                 return False
         return True
 
