@@ -15,9 +15,9 @@ num_energy_firms: 3
 num_shelter_firms: 3
 num_healthcare_firms: 2
 
-# Production (Cobb-Douglas)
-food_productivity: 2.0
-energy_productivity: 1.5
+# Production (Cobb-Douglas) - food/energy boosted to meet consumption
+food_productivity: 6.0
+energy_productivity: 5.0
 shelter_productivity: 0.8
 healthcare_productivity: 5.0
 labor_share: 0.7

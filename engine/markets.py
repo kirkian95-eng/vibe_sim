@@ -140,10 +140,13 @@ def clear_labor_market(
     for f in firms:
         f.num_workers = 0
 
-    # Compute labor demand per firm
+    # Compute labor demand per firm.
+    # Shelter firms excluded when govt provides shelter (see TRADEOFF in clear_goods_market)
     productivities = config.productivity()
     labor_demands: list[tuple[Firm, int]] = []
     for firm in firms:
+        if firm.good_type == GoodType.SHELTER:
+            continue  # govt provides shelter; don't waste labor
         if firm.is_healthcare:
             # Healthcare firms bid for workers to build capacity;
             # their demand is proportional to their cash (like other firms)
@@ -225,6 +228,9 @@ def run_production(
         if firm.is_healthcare:
             firm.production = 0.0
             continue
+        if firm.good_type == GoodType.SHELTER:
+            firm.production = 0.0
+            continue  # govt provides shelter; don't produce
         capital = ledger.account_balance(f"{firm.id}:capital")
         labor = float(firm.num_workers)
         output = cobb_douglas(

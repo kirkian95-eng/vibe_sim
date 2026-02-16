@@ -36,8 +36,9 @@ class SimConfig:
     num_healthcare_firms: int = 2
 
     # ── Production (Cobb-Douglas) ─────────────────────────────────
-    food_productivity: float = 2.0
-    energy_productivity: float = 1.5
+    # Food/energy boosted so supply can meet consumption (reduces price volatility)
+    food_productivity: float = 6.0
+    energy_productivity: float = 5.0
     shelter_productivity: float = 0.8
     healthcare_productivity: float = 5.0  # visits per worker per month
     labor_share: float = 0.7

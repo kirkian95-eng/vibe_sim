@@ -24,7 +24,8 @@ def test_economy_produces_output():
     assert results[-1].gdp > 0, "GDP should be positive"
     assert results[-1].food_produced > 0, "Food should be produced"
     assert results[-1].energy_produced > 0, "Energy should be produced"
-    assert results[-1].shelter_produced > 0, "Shelter should be produced"
+    # Shelter is govt-provided (no firm production); verify it is sold/provisioned
+    assert results[-1].shelter_sold > 0, "Shelter should be provisioned"
 
 
 def test_employment_dynamics():
