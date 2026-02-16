@@ -8,93 +8,17 @@ balanced journal entries on the shared ledger.
 from __future__ import annotations
 
 import random as _random
-from typing import Dict, List, Tuple
 
 from .actors import Bank, Firm, GoodType, Government, Individual
 from .config import SimConfig
 from .ledger import Ledger
+from .policy import (
+    post_sales_tax,
+)
 from .production import cobb_douglas, desired_labor, firm_target_output
-
 
 # ── Transaction helpers ─────────────────────────────────────────────
 # These encapsulate the double-entry for common economic transactions.
-
-
-def post_government_spending(
-    ledger: Ledger,
-    day: int,
-    govt: Government,
-    bank: Bank,
-    recipient_id: str,
-    amount: float,
-    description: str,
-) -> None:
-    """
-    Government spending creates money.
-    Government: DR spending_expense, CR currency_issued  (money creation)
-    Bank:       DR reserves,        CR deposits          (intermediation)
-    Recipient:  DR cash,            CR transfer_income / revenue
-    """
-    # Determine the recipient's income account
-    if recipient_id.startswith("ind_"):
-        income_acct = f"{recipient_id}:transfer_income"
-    elif recipient_id.startswith("firm_"):
-        income_acct = f"{recipient_id}:revenue"
-    else:
-        income_acct = f"{recipient_id}:equity"
-
-    ledger.post(day, description, [
-        (f"{govt.id}:spending_expense", amount, 0),
-        (f"{govt.id}:currency_issued", 0, amount),
-        (f"{bank.id}:reserves", amount, 0),
-        (f"{bank.id}:deposits", 0, amount),
-        (f"{recipient_id}:cash", amount, 0),
-        (income_acct, 0, amount),
-    ])
-
-
-def post_transfer_payment(
-    ledger: Ledger,
-    day: int,
-    govt: Government,
-    bank: Bank,
-    recipient: Individual,
-    amount: float,
-) -> None:
-    """Government transfer payment to an individual (unemployment benefit etc)."""
-    ledger.post(day, f"Govt transfer to {recipient.id}", [
-        (f"{govt.id}:transfer_expense", amount, 0),
-        (f"{govt.id}:currency_issued", 0, amount),
-        (f"{bank.id}:reserves", amount, 0),
-        (f"{bank.id}:deposits", 0, amount),
-        (f"{recipient.id}:cash", amount, 0),
-        (f"{recipient.id}:transfer_income", 0, amount),
-    ])
-
-
-def post_tax_payment(
-    ledger: Ledger,
-    day: int,
-    govt: Government,
-    bank: Bank,
-    payer_id: str,
-    amount: float,
-    description: str,
-) -> None:
-    """
-    Taxation destroys money.
-    Payer:      DR tax_expense,     CR cash
-    Bank:       DR deposits,        CR reserves
-    Government: DR currency_issued, CR tax_revenue
-    """
-    ledger.post(day, description, [
-        (f"{payer_id}:tax_expense", amount, 0),
-        (f"{payer_id}:cash", 0, amount),
-        (f"{bank.id}:deposits", amount, 0),
-        (f"{bank.id}:reserves", 0, amount),
-        (f"{govt.id}:currency_issued", amount, 0),
-        (f"{govt.id}:tax_revenue", 0, amount),
-    ])
 
 
 def post_wage_payment(
@@ -138,19 +62,30 @@ def post_goods_sale(
     total_price = quantity * price_per_unit
 
     # Buyer's transaction: acquire inventory (at nominal $1/unit), pay cash (at market price)
-    # Shortfall goes to equity (immediate consumption value)
-    ledger.post(day, f"Purchase: {buyer.id} buys {quantity:.1f} {good.value}", [
-        (f"{buyer.id}:inventory:{good.value}", quantity, 0),  # nominal value
-        (f"{buyer.id}:cash", 0, total_price),  # actual payment
-        (f"{buyer.id}:equity", total_price - quantity, 0),  # difference (consumption surplus/deficit)
-    ])
+    # Equity adjusts for the difference between nominal and market value.
+    diff = total_price - quantity
+    if diff >= 0:
+        # Paid more than nominal — equity debit (expense-like)
+        buyer_lines = [
+            (f"{buyer.id}:inventory:{good.value}", quantity, 0),
+            (f"{buyer.id}:cash", 0, total_price),
+            (f"{buyer.id}:equity", diff, 0),
+        ]
+    else:
+        # Paid less than nominal — equity credit (gain)
+        buyer_lines = [
+            (f"{buyer.id}:inventory:{good.value}", quantity, 0),
+            (f"{buyer.id}:cash", 0, total_price),
+            (f"{buyer.id}:equity", 0, -diff),
+        ]
+    ledger.post(day, f"Purchase: {buyer.id} buys {quantity:.1f} {good.value}", buyer_lines)
 
     # Firm's transaction: receive cash, record revenue, reduce inventory, record COGS
     ledger.post(day, f"Sale: {firm.id} sells {quantity:.1f} {good.value}", [
         (f"{firm.id}:cash", total_price, 0),
         (f"{firm.id}:revenue", 0, total_price),
-        (f"{firm.id}:inventory", 0, quantity),  # nominal value
-        (f"{firm.id}:equity", quantity, 0),  # COGS (cost of inventory sold)
+        (f"{firm.id}:inventory", 0, quantity),
+        (f"{firm.id}:equity", quantity, 0),
     ])
 
 
@@ -169,23 +104,6 @@ def post_goods_consumption(
     ledger.post(day, f"Consume: {individual.id} {quantity:.2f} {good.value}", [
         (f"{individual.id}:consumption_expense", quantity, 0),
         (f"{individual.id}:inventory:{good.value}", 0, quantity),
-    ])
-
-
-def post_profit_distribution(
-    ledger: Ledger,
-    day: int,
-    bank: Bank,
-    firm: Firm,
-    owner: Individual,
-    amount: float,
-) -> None:
-    """Firm distributes profits to owner."""
-    ledger.post(day, f"Profit dist: {firm.id} -> {owner.id}", [
-        (f"{firm.id}:equity", amount, 0),
-        (f"{firm.id}:cash", 0, amount),
-        (f"{owner.id}:cash", amount, 0),
-        (f"{owner.id}:profit_income", 0, amount),
     ])
 
 
@@ -208,20 +126,6 @@ def post_production(
     ])
 
 
-def post_sales_tax(
-    ledger: Ledger,
-    day: int,
-    govt: Government,
-    bank: Bank,
-    firm: Firm,
-    amount: float,
-) -> None:
-    """Firm remits sales tax to government."""
-    if amount <= 0:
-        return
-    post_tax_payment(ledger, day, govt, bank, firm.id, amount, f"Sales tax: {firm.id}")
-
-
 # ── Market clearing ─────────────────────────────────────────────────
 
 
@@ -229,11 +133,11 @@ def clear_labor_market(
     ledger: Ledger,
     day: int,
     config: SimConfig,
-    firms: List[Firm],
-    individuals: List[Individual],
+    firms: list[Firm],
+    individuals: list[Individual],
     bank: Bank,
     rng: _random.Random,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """
     Simple labor market: firms demand labor based on production targets,
     workers supply labor.  Matching is random.
@@ -249,7 +153,7 @@ def clear_labor_market(
 
     # Compute labor demand per firm
     productivities = config.productivity()
-    labor_demands: List[Tuple[Firm, int]] = []
+    labor_demands: list[tuple[Firm, int]] = []
     for firm in firms:
         inventory = ledger.account_balance(f"{firm.id}:inventory")
         avg_sales = max(1.0, firm.daily_sales if firm.daily_sales > 0 else 10.0)
@@ -263,9 +167,10 @@ def clear_labor_market(
         )
         # Constrained by cash: can the firm afford this many workers?
         cash = ledger.account_balance(f"{firm.id}:cash")
-        max_affordable = int(cash / max(firm.wage_offer, 1.0))
-        wanted = max(1, min(int(labor_needed) + 1, max_affordable))
-        labor_demands.append((firm, wanted))
+        max_affordable = max(0, int(cash / max(firm.wage_offer, 1.0)))
+        wanted = min(int(labor_needed) + 1, max_affordable)
+        if wanted > 0:
+            labor_demands.append((firm, wanted))
 
     # Shuffle workers for random matching
     workers = [ind for ind in individuals if not ind.is_owner]
@@ -276,6 +181,7 @@ def clear_labor_market(
 
     worker_idx = 0
     total_hired = 0
+    total_wages = 0.0
     for firm, demand in labor_demands:
         hired = 0
         while hired < demand and worker_idx < len(workers):
@@ -286,6 +192,7 @@ def clear_labor_market(
             firm.num_workers += 1
             hired += 1
             total_hired += 1
+            total_wages += firm.wage_offer
             # Post wage payment
             post_wage_payment(ledger, day, bank, firm, w, firm.wage_offer)
 
@@ -296,6 +203,7 @@ def clear_labor_market(
         "total_hired": total_hired,
         "total_workers": total_workers,
         "unemployment_rate": unemployment_rate,
+        "total_wages": total_wages,
     }
 
 
@@ -303,7 +211,7 @@ def run_production(
     ledger: Ledger,
     day: int,
     config: SimConfig,
-    firms: List[Firm],
+    firms: list[Firm],
 ) -> None:
     """Each firm produces output based on its labor and capital."""
     productivities = config.productivity()
@@ -326,26 +234,33 @@ def clear_goods_market(
     ledger: Ledger,
     day: int,
     config: SimConfig,
-    firms: List[Firm],
-    individuals: List[Individual],
+    firms: list[Firm],
+    individuals: list[Individual],
     bank: Bank,
     govt: Government,
     rng: _random.Random,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """
     Individuals buy goods from firms.  Priority: food > energy > shelter.
     Returns stats with prices and quantities.
     """
     needs = config.consumption_needs()
-    stats: Dict[str, float] = {}
+    stats: dict[str, float] = {}
 
     # Group firms by good type
-    firms_by_good: Dict[GoodType, List[Firm]] = {g: [] for g in GoodType}
+    firms_by_good: dict[GoodType, list[Firm]] = {g: [] for g in GoodType}
     for f in firms:
         firms_by_good[f.good_type].append(f)
 
-    total_sales: Dict[str, float] = {g.value: 0.0 for g in GoodType}
-    total_revenue: Dict[str, float] = {g.value: 0.0 for g in GoodType}
+    total_sales: dict[str, float] = {g.value: 0.0 for g in GoodType}
+    total_revenue: dict[str, float] = {g.value: 0.0 for g in GoodType}
+    worker_consumption = 0.0
+    capitalist_consumption = 0.0
+    total_sales_tax = 0.0
+
+    # Track per-firm daily sales for EMA (accumulated, not per-transaction)
+    firm_day_sales: dict[str, float] = {f.id: 0.0 for f in firms}
+    firm_day_revenue: dict[str, float] = {f.id: 0.0 for f in firms}
 
     # Shuffle individuals for fairness
     order = list(individuals)
@@ -391,13 +306,23 @@ def clear_goods_market(
                     tax = min(tax, firm_cash)
                     if tax > 0.01:
                         post_sales_tax(ledger, day, govt, bank, firm, tax)
+                        total_sales_tax += tax
 
                 remaining_need -= qty
                 cash -= cost
                 total_sales[good_type.value] += qty
                 total_revenue[good_type.value] += cost
-                firm.daily_sales = (firm.daily_sales * 0.9) + qty * 0.1  # EMA
-                firm.daily_revenue = (firm.daily_revenue * 0.9) + cost * 0.1
+                firm_day_sales[firm.id] += qty
+                firm_day_revenue[firm.id] += cost
+                if ind.is_owner:
+                    capitalist_consumption += cost
+                else:
+                    worker_consumption += cost
+
+    # Update firm EMAs with daily totals (not per-transaction)
+    for firm in firms:
+        firm.daily_sales = (firm.daily_sales * 0.9) + firm_day_sales[firm.id] * 0.1
+        firm.daily_revenue = (firm.daily_revenue * 0.9) + firm_day_revenue[firm.id] * 0.1
 
     for g in GoodType:
         stats[f"{g.value}_quantity_sold"] = total_sales[g.value]
@@ -408,13 +333,17 @@ def clear_goods_market(
         else:
             stats[f"{g.value}_avg_price"] = 0.0
 
+    stats["worker_consumption"] = worker_consumption
+    stats["capitalist_consumption"] = capitalist_consumption
+    stats["total_sales_tax"] = total_sales_tax
+
     return stats
 
 
 def consume_goods(
     ledger: Ledger,
     day: int,
-    individuals: List[Individual],
+    individuals: list[Individual],
     config: SimConfig,
 ) -> None:
     """Individuals consume goods from their inventory."""
@@ -428,123 +357,22 @@ def consume_goods(
                 post_goods_consumption(ledger, day, ind, good_type, consumed)
 
 
-def government_operations(
-    ledger: Ledger,
-    day: int,
-    config: SimConfig,
-    govt: Government,
-    bank: Bank,
-    individuals: List[Individual],
-    firms: List[Firm],
-    rng: _random.Random,
-) -> Dict[str, float]:
-    """
-    Government collects income tax and makes transfer payments.
-    Taxes destroy money; spending creates money.
-    """
-    stats: Dict[str, float] = {}
-    total_tax = 0.0
-    total_transfers = 0.0
-
-    # Build a lookup for firms by id (avoid O(n) search per individual)
-    firm_by_id = {f.id: f for f in firms}
-
-    # Income tax on wages (collected from individuals with labor income)
-    for ind in individuals:
-        if ind.employed:
-            # Tax is on today's wages (rough: use wage of employer)
-            if ind.employer_id:
-                employer = firm_by_id.get(ind.employer_id)
-                if employer:
-                    tax = employer.wage_offer * config.income_tax_rate
-                    ind_cash = ledger.account_balance(f"{ind.id}:cash")
-                    tax = min(tax, ind_cash)
-                    if tax > 0.01:
-                        post_tax_payment(
-                            ledger, day, govt, bank, ind.id, tax,
-                            f"Income tax: {ind.id}",
-                        )
-                        total_tax += tax
-
-    # Transfer payments to unemployed
-    unemployed = [ind for ind in individuals if not ind.employed and not ind.is_owner]
-    for ind in unemployed:
-        amount = config.daily_govt_transfer
-        post_transfer_payment(ledger, day, govt, bank, ind, amount)
-        total_transfers += amount
-
-    # General government spending (public goods — distributed to random firms)
-    if config.daily_govt_spending > 0 and firms:
-        per_firm = config.daily_govt_spending / len(firms)
-        for firm in firms:
-            post_government_spending(
-                ledger, day, govt, bank, firm.id, per_firm,
-                f"Govt spending: {firm.id}",
-            )
-            total_transfers += per_firm
-
-    stats["total_tax_collected"] = total_tax
-    stats["total_govt_transfers"] = total_transfers
-    stats["govt_deficit"] = total_transfers - total_tax
-    return stats
-
-
-def firm_profit_distribution(
-    ledger: Ledger,
-    day: int,
-    config: SimConfig,
-    firms: List[Firm],
-    individuals: List[Individual],
-    bank: Bank,
-) -> float:
-    """
-    Firms distribute a fraction of profits to owners (weekly).
-    Returns total distributed.
-    """
-    if day % 7 != 0:  # weekly distribution
-        return 0.0
-
-    total_distributed = 0.0
-    ind_by_id = {i.id: i for i in individuals}
-    for firm in firms:
-        if not firm.owner_id:
-            continue
-        owner = ind_by_id.get(firm.owner_id)
-        if not owner:
-            continue
-
-        revenue = ledger.account_balance(f"{firm.id}:revenue")
-        expenses = (
-            ledger.account_balance(f"{firm.id}:wage_expense")
-            + ledger.account_balance(f"{firm.id}:input_expense")
-            + ledger.account_balance(f"{firm.id}:tax_expense")
-        )
-        profit = revenue - expenses
-        if profit <= 0:
-            continue
-
-        dist = profit * config.profit_distribution_rate * (1.0 / 52.0)  # weekly share
-        firm_cash = ledger.account_balance(f"{firm.id}:cash")
-        dist = min(dist, firm_cash * 0.5)  # don't drain cash
-        if dist > 1.0:
-            post_profit_distribution(ledger, day, bank, firm, owner, dist)
-            total_distributed += dist
-
-    return total_distributed
-
-
 def adjust_prices_and_wages(
     config: SimConfig,
-    firms: List[Firm],
+    firms: list[Firm],
     unemployment_rate: float,
+    ledger: Ledger | None = None,
 ) -> None:
-    """End-of-day price and wage adjustments."""
+    """End-of-day price and wage adjustments based on inventory levels."""
     from .production import adjust_price, adjust_wage
 
     for firm in firms:
+        inventory = 0.0
+        if ledger is not None:
+            inventory = ledger.account_balance(f"{firm.id}:inventory")
         firm.price = adjust_price(
             firm.price,
-            0,  # we'll use daily_sales as proxy
+            inventory,
             max(1.0, firm.daily_sales),
             config.target_inventory_days,
             config.price_adjustment_speed,

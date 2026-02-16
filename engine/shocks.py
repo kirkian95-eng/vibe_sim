@@ -8,7 +8,7 @@ on a given day.  Shocks are registered before the simulation runs.
 from __future__ import annotations
 
 import dataclasses as dc
-from typing import Callable, Dict, List, Optional
+from collections.abc import Callable
 
 from .config import SimConfig
 
@@ -132,7 +132,7 @@ SHOCK_FACTORIES = {
 }
 
 
-def shock_from_dict(d: dict) -> Optional[Shock]:
+def shock_from_dict(d: dict) -> Shock | None:
     """Create a Shock from a JSON-style dict: {type, day, value, ...}."""
     factory = SHOCK_FACTORIES.get(d.get("type", ""))
     if factory:
@@ -142,7 +142,7 @@ def shock_from_dict(d: dict) -> Optional[Shock]:
 
 # ── Scenario presets ────────────────────────────────────────────────
 
-SCENARIOS: Dict[str, List[Shock]] = {
+SCENARIOS: dict[str, list[Shock]] = {
     "baseline": [],
     "stimulus": [
         stimulus_spending(day=90, extra_daily=10_000),

@@ -1,135 +1,82 @@
 # VibeSim — Economic Simulation Engine
 
-A research-grade macroeconomic/microeconomic simulation engine grounded in **double-entry bookkeeping**. Every economic transaction is a balanced journal entry, ensuring accounting integrity at all times.
+A macroeconomic sandbox for hobbyists and academics to explore how fiscal policy, monetary policy, and market dynamics interact in a simulated economy with multiple agent types.
+
+## What Is This?
+
+VibeSim lets you spin up a small economy — with workers, firms, a bank, and a government — and watch what happens when you pull different policy levers. Raise taxes, cut spending, trigger a technology boom, or cause an energy crisis, and see how employment, prices, output, and inequality respond.
+
+Think of it as SimCity for macroeconomics — tune the knobs, watch the dials, and build intuition for how real economies respond to policy changes.
 
 ## Features
 
-- 🧮 **Rigorous Accounting**: Append-only journal, double-entry bookkeeping, full audit trail
-- 🏦 **Modern Monetary Theory**: "Taxes destroy money; government spending creates money"
-- 👥 **Multi-Agent Economy**: Individuals, firms, banks, consolidated government
-- 📊 **Production Economy**: Food, energy, shelter produced via Cobb-Douglas functions
-- 💼 **Labor & Goods Markets**: Daily market clearing with wage/price adjustment
-- 📈 **Scenario Analysis**: Built-in policy shocks (stimulus, austerity, tax changes, technology)
-- 🎨 **Interactive Dashboard**: Flask + Plotly web UI for parameter tuning and visualization
-- ✅ **Tested**: Accounting invariants + economic sanity checks
+- **Multi-Agent Economy**: Workers, firms (food/energy/shelter), a bank, and a consolidated government
+- **Policy Levers**: Tax rates, government spending, transfers, minimum wage, and more
+- **Scenario Shocks**: Built-in presets for stimulus, austerity, tax reform, tech booms, energy crises
+- **MMT Money Model**: Government spending creates money; taxation destroys it
+- **Cobb-Douglas Production**: Standard production functions with labor and capital inputs
+- **Interactive Dashboard**: Flask + Plotly web UI for parameter tuning and visualization
+- **Reproducible**: Seeded RNG — same seed, same results
+- **Exportable**: CSV output, YAML configs, run artifact saving
 
 ## Quick Start
 
-### Installation
-
 ```bash
-# Clone the repo
-git clone <repo-url>
-cd vibe_sim
-
-# Install dependencies
+# Install
 pip install -r requirements.txt
-```
 
-### Run the Dashboard
-
-```bash
+# Launch the dashboard
 python run.py
-```
 
-Open http://localhost:5000 in your browser. Configure parameters, select a scenario shock, and run the simulation.
-
-### Run a Demo (CLI)
-
-```bash
+# Or run a CLI demo
 python run.py --demo
+
+# Run tests
+pytest -m smoke tests/
 ```
 
-This runs a baseline vs stimulus comparison and prints results to the console.
+Open http://localhost:5000 to configure parameters, select a scenario, and run.
 
-### Run Tests
+## How It Works
 
-```bash
-python run.py --test
-# or
-pytest -v tests/
+Each simulated day follows this cycle:
+
+1. **Government** collects taxes and makes transfer payments
+2. **Labor market** clears — firms hire workers and pay wages
+3. **Production** — firms produce goods using labor + capital
+4. **Goods market** clears — workers buy food, energy, shelter
+5. **Consumption** — individuals use what they bought
+6. **Profit distribution** — firms pay owners (weekly)
+7. **Price/wage adjustment** — firms and wages respond to market signals
+
+### Money Creation (MMT)
+
+- Government spending **creates** money (credits bank deposits)
+- Taxation **destroys** money (debits deposits)
+- The government deficit = net money injected into the private sector
+
+### Production
+
+```
+output = productivity × labor^0.7 × capital^0.3
 ```
 
-## Architecture
-
-### Core Components
-
-```
-engine/
-├── ledger.py       # Double-entry bookkeeping journal and accounts
-├── actors.py       # Individual, Firm, Bank, Government actor types
-├── config.py       # Simulation parameters (tuneable)
-├── production.py   # Cobb-Douglas production functions
-├── markets.py      # Labor and goods market clearing + transactions
-├── simulation.py   # Main daily simulation loop
-└── shocks.py       # Scenario shocks (policy changes, tech breakthroughs)
-
-dashboard/
-├── app.py          # Flask API server
-└── templates/
-    └── index.html  # Interactive dashboard UI
-
-tests/
-├── test_accounting.py  # Accounting invariants
-└── test_economics.py   # Economic sanity checks
-```
-
-### Accounting Model
-
-Every transaction is a **balanced journal entry** with debits and credits:
-
-- **Asset** and **Expense** accounts increase with debits
-- **Liability**, **Equity**, and **Revenue** accounts increase with credits
-- Each entry must balance: `total_debits = total_credits`
-
-The ledger maintains:
-- Append-only journal (authoritative source of truth)
-- Running account balances (incrementally updated)
-- Invariant checks: balance sheet equation, system balance, sector balance
-
-### Economic Model
-
-**Actors:**
-- **Individuals**: Work, consume, pay taxes, may own firms
-- **Firms**: Produce goods (food/energy/shelter), hire labor, set prices
-- **Bank**: Intermediates deposits and loans
-- **Government** (consolidated CB + Treasury): Spends money into existence, taxes destroy money
-
-**Daily Cycle:**
-1. Government spending (transfers to unemployed + public goods)
-2. Labor market clearing (firms hire workers, pay wages)
-3. Production (firms produce output using labor + capital)
-4. Goods market clearing (individuals buy goods from firms)
-5. Consumption (individuals consume from inventory)
-6. Taxation (income tax + sales tax)
-7. Profit distribution (weekly)
-8. Price & wage adjustment (respond to inventory levels and unemployment)
-
-**Production Function:**
-```
-output = productivity * labor^α * capital^β
-```
-where α = labor_share (default 0.7), β = capital_share (default 0.3).
-
-**Money Creation/Destruction (MMT):**
-- Government spending **creates** money (credits bank reserves/deposits)
-- Taxation **destroys** money (debits deposits/reserves)
-- Private sector net financial assets = cumulative government deficit
+Standard Cobb-Douglas with diminishing returns.
 
 ## Scenario Shocks
 
-Built-in scenarios:
-- **baseline**: No shocks
-- **stimulus**: Government spending +10k/day at day 90
-- **austerity**: Government spending -50% at day 90
-- **tax_reform**: Income tax cut to 10% at day 90
-- **tech_boom**: Food productivity 2x, energy 1.5x at day 90
-- **energy_crisis**: Energy productivity drops to 40% at day 90
-- **stagflation**: Energy crisis + delayed stimulus
+| Scenario | What Happens |
+|----------|-------------|
+| **stimulus** | Government spending +10k/day at day 90 |
+| **austerity** | Government spending -50% at day 90 |
+| **tax_reform** | Income tax cut to 10% at day 90 |
+| **tech_boom** | Food productivity 2x, energy 1.5x at day 90 |
+| **energy_crisis** | Energy productivity drops to 40% at day 90 |
+| **stagflation** | Energy crisis + delayed stimulus |
 
 ## Configuration
 
-Key parameters (see `engine/config.py`):
+Key parameters (see `engine/config.py` or `configs/baseline.yaml`):
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
@@ -140,65 +87,22 @@ Key parameters (see `engine/config.py`):
 | `sales_tax_rate` | 0.05 | Sales tax rate |
 | `daily_govt_spending` | 5000 | Daily public goods spending |
 | `daily_govt_transfer` | 10 | Daily transfer per unemployed |
-| `initial_wage` | 80 | Starting wage |
-| `min_wage` | 20 | Wage floor |
+| `initial_wage` | 80 | Starting daily wage |
+
+Load from YAML:
+```python
+from engine.io import load_config_yaml
+config = load_config_yaml("configs/baseline.yaml")
+```
 
 ## Output & Metrics
 
-The simulation tracks:
-
-**Macro:**
-- GDP (daily aggregate output value)
-- Unemployment rate
-- Average wage
-- Money supply (bank deposits)
-- Government deficit
-
-**Prices:**
-- Food, energy, shelter prices (market-determined)
-
-**Distribution:**
-- Gini coefficient
-- Top 1% income share
-- Bottom 50% income share
-
-**Sector Balances:**
-- Private sector net worth
-- Government net worth
-- Banking sector net worth
-
-**Production:**
-- Quantity produced/sold by good type
-- Firm-level inventory, revenue, employment
-
-## Testing
-
-### Accounting Invariants
-
-Every test run verifies:
-- All journal entries are balanced
-- Balance sheet equation holds for every actor: `Assets = Liabilities + Equity + Revenue - Expense`
-- System-wide balance: total debits = total credits
-- Running balances match journal replay
-- Sector balances sum correctly (closed economy)
-
-### Economic Sanity
-
-Tests verify:
-- GDP and production are positive
-- Prices remain stable (no hyperinflation)
-- Employment responds to market conditions
-- Stimulus increases output
-- Austerity reduces output
-- Technology boosts productivity
-- Inequality exists and responds to policy
-- Deterministic runs (same seed → same results)
+The simulation tracks: GDP, unemployment rate, average wage, money supply, government deficit, food/energy/shelter prices and quantities, Gini coefficient, income shares, and sector balances.
 
 ## Example: Policy Comparison
 
 ```python
-from engine.config import SimConfig
-from engine.simulation import Simulation
+from engine import SimConfig, Simulation
 from engine.shocks import stimulus_spending
 
 config = SimConfig(num_days=180, seed=42)
@@ -211,73 +115,50 @@ baseline_results = baseline.run()
 stim = Simulation(config, shocks=[stimulus_spending(day=90, extra_daily=10_000)])
 stim_results = stim.run()
 
-# Compare GDP
 print(f"Baseline GDP: {baseline_results[-1].gdp:.0f}")
 print(f"Stimulus GDP: {stim_results[-1].gdp:.0f}")
 ```
 
-## Research Applications
+## Use Cases
 
-This engine can be used to study:
-- Fiscal policy effectiveness (stimulus vs austerity)
-- Monetary policy transmission (interest rates, reserve requirements)
-- Inequality dynamics (progressive taxation, UBI, wealth taxes)
-- Supply shocks (energy crises, productivity changes)
-- Sectoral balances (MMT predictions, private-public flows)
-- Labor market dynamics (minimum wage, Phillips curve)
+- Explore fiscal policy effects (stimulus vs austerity)
+- Study inequality dynamics (progressive taxation, UBI scenarios)
+- Observe supply shocks (energy crises, productivity changes)
+- Examine sectoral balance identities (MMT predictions)
+- Teach macro concepts with a hands-on simulation
 
-All results are reproducible (seeded RNG) and auditable (full journal available).
+## Project Structure
 
-## License
+```
+engine/           # Core simulation (importable Python package)
+  simulation.py   # Main loop
+  config.py       # SimConfig dataclass
+  ledger.py       # Transaction ledger
+  actors.py       # Individual, Firm, Bank, Government
+  markets.py      # Labor and goods market clearing
+  policy.py       # Government operations and taxation
+  production.py   # Cobb-Douglas production + price/wage rules
+  shocks.py       # Scenario shocks
+  metrics.py      # Daily statistics collection
+  io.py           # YAML config, CSV export, run artifacts
+dashboard/        # Flask web UI
+tests/            # Test suite
+configs/          # YAML config presets
+```
 
-See [LICENSE](LICENSE) file.
+## Future Directions
 
-## Architecture Decisions
-
-**Why double-entry bookkeeping?**
-- Ensures consistency: every dollar is tracked, no leaks
-- Audit trail: full replay from journal
-- Sectoral balances: private, government, banking sectors must balance
-- Realistic monetary operations: money is created/destroyed correctly
-
-**Why consolidated government (CB + Treasury)?**
-- Simplifies money creation: government spending = money creation
-- MMT-friendly: taxes destroy money, spending creates it
-- Avoids intra-government accounting complexity
-
-**Why daily timesteps?**
-- Fast enough for year-long simulations
-- Granular enough for policy shock analysis
-- Market clearing happens at reasonable frequency
-
-**Why Cobb-Douglas production?**
-- Standard in macro models
-- Diminishing returns to labor and capital
-- Easy to calibrate and interpret
-
-## Future Enhancements
-
-Potential extensions:
-- Investment decisions (endogenous capital accumulation)
-- Bank lending (endogenous money creation)
-- Multiple goods sectors (intermediate inputs)
-- International trade (open economy)
-- Expectation formation (adaptive/rational)
-- Heterogeneous agents (different preferences, skills)
-- Asset markets (stocks, bonds, real estate)
-- Climate/resource constraints
+- Bank lending / endogenous credit creation
+- Capital investment and depreciation
+- Bond markets and interest rate policy
+- Open economy (trade, exchange rates)
+- Heterogeneous agents (skills, preferences)
+- Asset markets (stocks, real estate)
 
 ## Contributing
 
-This is a research prototype. Contributions welcome:
-- Additional scenario shocks
-- New policy levers
-- Performance optimizations
-- Visualization improvements
-- Documentation enhancements
-
-Ensure all changes preserve accounting invariants (tests must pass).
+See [CONTRIBUTING.md](CONTRIBUTING.md). Run the smoke tests before submitting a PR.
 
 ---
 
-Built with Python, Flask, and Plotly. Accounting rigor meets economic simulation.
+Built with Python, Flask, and Plotly.

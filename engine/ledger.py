@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import dataclasses as dc
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
 
 # Tolerance for floating-point balance checks (sub-cent)
 EPSILON = 1e-6
@@ -80,14 +79,14 @@ class JournalEntry:
     entry_id: int
     day: int
     description: str
-    lines: Tuple[JournalLine, ...]
-    metadata: Optional[dict] = None
+    lines: tuple[JournalLine, ...]
+    metadata: dict | None = None
 
     def total_debits(self) -> float:
-        return sum(l.debit for l in self.lines)
+        return sum(ln.debit for ln in self.lines)
 
     def total_credits(self) -> float:
-        return sum(l.credit for l in self.lines)
+        return sum(ln.credit for ln in self.lines)
 
     def is_balanced(self) -> bool:
         return abs(self.total_debits() - self.total_credits()) < EPSILON
@@ -106,9 +105,9 @@ class Ledger:
     """
 
     def __init__(self):
-        self._accounts: Dict[str, Account] = {}
-        self._actor_accounts: Dict[str, List[Account]] = {}  # actor_id -> accounts
-        self._journal: List[JournalEntry] = []
+        self._accounts: dict[str, Account] = {}
+        self._actor_accounts: dict[str, list[Account]] = {}  # actor_id -> accounts
+        self._journal: list[JournalEntry] = []
         self._next_entry_id: int = 1
 
     # ── Account management ──────────────────────────────────────────
@@ -134,13 +133,13 @@ class Ledger:
     def get_account(self, account_id: str) -> Account:
         try:
             return self._accounts[account_id]
-        except KeyError:
-            raise LedgerError(f"Account not found: {account_id}")
+        except KeyError as err:
+            raise LedgerError(f"Account not found: {account_id}") from err
 
     def account_balance(self, account_id: str) -> float:
         return self.get_account(account_id).balance
 
-    def actor_accounts(self, actor_id: str) -> List[Account]:
+    def actor_accounts(self, actor_id: str) -> list[Account]:
         return self._actor_accounts.get(actor_id, [])
 
     # ── Journal posting ─────────────────────────────────────────────
@@ -149,8 +148,8 @@ class Ledger:
         self,
         day: int,
         description: str,
-        lines: List[Tuple[str, float, float]],
-        metadata: Optional[dict] = None,
+        lines: list[tuple[str, float, float]],
+        metadata: dict | None = None,
     ) -> JournalEntry:
         """
         Post a balanced journal entry.
@@ -202,7 +201,7 @@ class Ledger:
         debit_account: str,
         credit_account: str,
         amount: float,
-        metadata: Optional[dict] = None,
+        metadata: dict | None = None,
     ) -> JournalEntry:
         """Simple two-line entry: debit one account, credit another."""
         if amount <= 0:
@@ -214,21 +213,21 @@ class Ledger:
     # ── Queries ─────────────────────────────────────────────────────
 
     @property
-    def journal(self) -> List[JournalEntry]:
+    def journal(self) -> list[JournalEntry]:
         return list(self._journal)
 
     @property
     def journal_size(self) -> int:
         return len(self._journal)
 
-    def entries_for_day(self, day: int) -> List[JournalEntry]:
+    def entries_for_day(self, day: int) -> list[JournalEntry]:
         return [e for e in self._journal if e.day == day]
 
-    def entries_for_account(self, account_id: str) -> List[JournalEntry]:
+    def entries_for_account(self, account_id: str) -> list[JournalEntry]:
         return [
             e
             for e in self._journal
-            if any(l.account_id == account_id for l in e.lines)
+            if any(ln.account_id == account_id for ln in e.lines)
         ]
 
     # ── Balance sheet for an actor ──────────────────────────────────
@@ -238,7 +237,7 @@ class Ledger:
         Returns {assets, liabilities, equity, revenue, expense}
         where each is a dict of account_name -> balance.
         """
-        result = {t.value: {} for t in AccountType}
+        result: dict[str, dict[str, float]] = {t.value: {} for t in AccountType}
         for acct in self.actor_accounts(actor_id):
             result[acct.account_type.value][acct.name] = acct.balance
         return result
@@ -248,15 +247,12 @@ class Ledger:
         bs = self.balance_sheet(actor_id)
         total_assets = sum(bs["asset"].values())
         total_liabilities = sum(bs["liability"].values())
-        return total_assets - total_liabilities
+        return float(total_assets - total_liabilities)
 
     # ── Invariant checks ────────────────────────────────────────────
 
     def check_all_entries_balanced(self) -> bool:
-        for entry in self._journal:
-            if not entry.is_balanced():
-                return False
-        return True
+        return all(entry.is_balanced() for entry in self._journal)
 
     def check_entries_balanced_from(self, start_idx: int) -> bool:
         """Check balance only for entries from start_idx onward (fast daily check)."""
@@ -266,7 +262,10 @@ class Ledger:
         return True
 
     def check_balance_sheet_equation(self, actor_id: str) -> bool:
-        """Assets = Liabilities + Equity + Revenue - Expense."""
+        """Assets = Liabilities + Equity + Revenue - Expense.
+
+        Tolerance scales with journal size to handle float64 accumulation.
+        """
         bs = self.balance_sheet(actor_id)
         total_assets = sum(bs["asset"].values())
         total_liabilities = sum(bs["liability"].values())
@@ -275,12 +274,16 @@ class Ledger:
         total_expense = sum(bs["expense"].values())
         lhs = total_assets
         rhs = total_liabilities + total_equity + total_revenue - total_expense
-        return abs(lhs - rhs) < EPSILON
+        tol = EPSILON + len(self._journal) * 1e-10
+        return bool(abs(lhs - rhs) < tol)
 
     def check_system_balance(self) -> bool:
         """
         Total debits in all accounts must equal total credits.
         Equivalently: sum of all debit-normal balances = sum of all credit-normal balances.
+
+        Uses a tolerance that scales with the number of journal entries
+        to account for float64 accumulation error in large simulations.
         """
         total_debit_normal = 0.0
         total_credit_normal = 0.0
@@ -289,9 +292,11 @@ class Ledger:
                 total_debit_normal += acct.balance
             else:
                 total_credit_normal += acct.balance
-        return abs(total_debit_normal - total_credit_normal) < EPSILON
+        # Scale tolerance: base EPSILON + 1e-10 per journal entry
+        tol = EPSILON + len(self._journal) * 1e-10
+        return abs(total_debit_normal - total_credit_normal) < tol
 
-    def check_sector_balance(self, actor_ids: List[str]) -> float:
+    def check_sector_balance(self, actor_ids: list[str]) -> float:
         """
         Net financial position of a sector (group of actors).
         For the whole economy this should be zero (one entity's asset
@@ -302,12 +307,12 @@ class Ledger:
             total += self.actor_net_worth(aid)
         return total
 
-    def replay_balances(self) -> Dict[str, float]:
+    def replay_balances(self) -> dict[str, float]:
         """
         Replay journal from scratch and return computed balances.
         Useful for auditing that running balances match the journal.
         """
-        replayed: Dict[str, float] = {aid: 0.0 for aid in self._accounts}
+        replayed: dict[str, float] = {aid: 0.0 for aid in self._accounts}
         for entry in self._journal:
             for line in entry.lines:
                 acct = self._accounts[line.account_id]

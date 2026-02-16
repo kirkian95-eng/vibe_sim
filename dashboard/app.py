@@ -16,9 +16,8 @@ from typing import List
 
 from flask import Flask, jsonify, render_template, request
 
-from engine.config import SimConfig
+from engine import SimConfig, Simulation
 from engine.shocks import SCENARIOS, Shock, shock_from_dict
-from engine.simulation import Simulation
 
 app = Flask(
     __name__,

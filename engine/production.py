@@ -7,9 +7,6 @@ production function:  output = productivity * labor^alpha * capital^beta
 
 from __future__ import annotations
 
-import math
-from typing import Dict
-
 
 def cobb_douglas(
     productivity: float,
@@ -25,7 +22,7 @@ def cobb_douglas(
     """
     if labor <= 0 or capital <= 0:
         return 0.0
-    return productivity * (labor ** labor_share) * (capital ** capital_share)
+    return float(productivity * (labor ** labor_share) * (capital ** capital_share))
 
 
 def desired_labor(
@@ -42,7 +39,7 @@ def desired_labor(
     if capital_factor <= 0:
         return 0.0
     raw = target_output / capital_factor
-    return raw ** (1.0 / labor_share)
+    return float(raw ** (1.0 / labor_share))
 
 
 def firm_target_output(
@@ -81,6 +78,8 @@ def adjust_price(
     ratio = current_inventory / target_inv  # >1 means excess inventory
     # adjustment factor: negative when inventory is high, positive when low
     adj = (1.0 - ratio) * adjustment_speed
+    # Cap per-day adjustment to ±speed to prevent compound spiraling
+    adj = max(-adjustment_speed, min(adj, adjustment_speed))
     new_price = current_price * (1.0 + adj)
     return max(min_price, new_price)
 
@@ -96,7 +95,7 @@ def adjust_wage(
     Phillips-curve-style wage adjustment.
     Low unemployment → wages rise. High unemployment → wages fall.
     """
-    gap = target_unemployment - unemployment_rate  # positive means too much unemployment
-    adj = -gap * adjustment_speed  # wages rise when gap is negative (low unemployment)
+    gap = target_unemployment - unemployment_rate  # negative when unemployment exceeds target
+    adj = gap * adjustment_speed  # wages rise when gap > 0 (low unemployment)
     new_wage = current_wage * (1.0 + adj)
     return max(min_wage, new_wage)

@@ -1,0 +1,61 @@
+# VibeSim baseline configuration
+# Load with: engine.io.load_config_yaml("configs/baseline.yaml")
+
+name: baseline
+seed: 42
+num_days: 365
+
+# Population
+num_individuals: 1000
+owner_fraction: 0.01
+
+# Firms
+num_food_firms: 4
+num_energy_firms: 3
+num_shelter_firms: 3
+
+# Production (Cobb-Douglas)
+food_productivity: 2.0
+energy_productivity: 1.5
+shelter_productivity: 0.8
+labor_share: 0.7
+capital_share: 0.3
+
+# Initial endowments
+initial_firm_cash: 50000.0
+initial_firm_capital: 100.0
+initial_firm_inventory: 500.0
+initial_individual_cash: 500.0
+initial_bank_reserves: 500000.0
+
+# Consumption needs (units/person/day)
+food_need: 1.0
+energy_need: 0.5
+shelter_need: 0.033
+
+# Initial prices
+initial_food_price: 5.0
+initial_energy_price: 8.0
+initial_shelter_price: 30.0
+
+# Wages
+initial_wage: 80.0
+min_wage: 20.0
+wage_adjustment_speed: 0.02
+
+# Price adjustment
+price_adjustment_speed: 0.03
+target_inventory_days: 10.0
+
+# Government / fiscal
+income_tax_rate: 0.20
+sales_tax_rate: 0.05
+daily_govt_transfer: 10.0
+daily_govt_spending: 5000.0
+
+# Banking
+interest_rate: 0.05
+reserve_requirement: 0.10
+
+# Firm behavior
+profit_distribution_rate: 0.50

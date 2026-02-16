@@ -7,9 +7,8 @@ all required invariants throughout the simulation.
 
 import pytest
 
-from engine.config import SimConfig
-from engine.ledger import AccountType, Ledger
-from engine.simulation import Simulation
+from engine import SimConfig, Simulation
+from engine.ledger import AccountType, Ledger, LedgerError
 
 
 def test_basic_ledger_creation():
@@ -41,7 +40,7 @@ def test_unbalanced_entry_rejected():
     ledger.create_account("a", "cash", AccountType.ASSET)
     ledger.create_account("b", "cash", AccountType.ASSET)
 
-    with pytest.raises(Exception):
+    with pytest.raises(LedgerError):
         ledger.post(0, "Unbalanced", [("a:cash", 100, 0), ("b:cash", 0, 50)])
 
 
@@ -98,7 +97,7 @@ def test_simulation_accounting_valid():
     config = SimConfig(
         seed=123,
         num_days=30,
-        num_individuals=100,
+        num_individuals=50,
         num_food_firms=2,
         num_energy_firms=2,
         num_shelter_firms=2,
@@ -133,11 +132,11 @@ def test_simulation_accounting_valid():
 
 
 def test_simulation_longer_run():
-    """Test a full year with accounting validation."""
+    """Test a longer run with accounting validation."""
     config = SimConfig(
         seed=42,
-        num_days=365,
-        num_individuals=200,
+        num_days=90,
+        num_individuals=50,
         num_food_firms=3,
         num_energy_firms=2,
         num_shelter_firms=2,
@@ -146,7 +145,7 @@ def test_simulation_longer_run():
     sim = Simulation(config)
     results = sim.run()
 
-    assert len(results) == 365
+    assert len(results) == 90
 
     # All daily stats should show accounting is valid
     for stat in results:

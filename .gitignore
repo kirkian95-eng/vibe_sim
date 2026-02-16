@@ -29,3 +29,19 @@ ENV/
 *.swp
 *.swo
 *~
+
+# Run artifacts
+runs/
+
+# Hypothesis
+.hypothesis/
+
+# Mypy
+.mypy_cache/
+
+# Ruff
+.ruff_cache/
+
+# OS
+.DS_Store
+Thumbs.db
