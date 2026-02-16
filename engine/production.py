@@ -44,41 +44,41 @@ def desired_labor(
 
 def firm_target_output(
     current_inventory: float,
-    avg_daily_sales: float,
-    target_inventory_days: float,
+    avg_monthly_sales: float,
+    target_inventory_months: float,
 ) -> float:
     """
-    Firms target enough inventory to cover target_inventory_days of sales,
+    Firms target enough inventory to cover target_inventory_months of sales,
     producing the shortfall.
     """
-    target_inventory = avg_daily_sales * target_inventory_days
+    target_inventory = avg_monthly_sales * target_inventory_months
     shortfall = target_inventory - current_inventory
-    # Produce at least enough to cover expected daily sales, plus restock
-    return max(avg_daily_sales, avg_daily_sales + shortfall * 0.2)
+    # Produce at least enough to cover expected monthly sales, plus restock
+    return max(avg_monthly_sales, avg_monthly_sales + shortfall * 0.2)
 
 
 def adjust_price(
     current_price: float,
     current_inventory: float,
-    avg_daily_sales: float,
-    target_inventory_days: float,
+    avg_monthly_sales: float,
+    target_inventory_months: float,
     adjustment_speed: float,
     min_price: float = 0.5,
 ) -> float:
     """
     If inventory is above target, lower price; if below, raise price.
     """
-    if avg_daily_sales <= 0:
+    if avg_monthly_sales <= 0:
         return current_price
 
-    target_inv = avg_daily_sales * target_inventory_days
+    target_inv = avg_monthly_sales * target_inventory_months
     if target_inv <= 0:
         return current_price
 
     ratio = current_inventory / target_inv  # >1 means excess inventory
     # adjustment factor: negative when inventory is high, positive when low
     adj = (1.0 - ratio) * adjustment_speed
-    # Cap per-day adjustment to ±speed to prevent compound spiraling
+    # Cap per-month adjustment to +/-speed to prevent compound spiraling
     adj = max(-adjustment_speed, min(adj, adjustment_speed))
     new_price = current_price * (1.0 + adj)
     return max(min_price, new_price)
@@ -92,8 +92,8 @@ def adjust_wage(
     min_wage: float = 20.0,
 ) -> float:
     """
-    Phillips-curve-style wage adjustment.
-    Low unemployment → wages rise. High unemployment → wages fall.
+    Phillips-curve-style wage adjustment per month.
+    Low unemployment -> wages rise. High unemployment -> wages fall.
     """
     gap = target_unemployment - unemployment_rate  # negative when unemployment exceeds target
     adj = gap * adjustment_speed  # wages rise when gap > 0 (low unemployment)

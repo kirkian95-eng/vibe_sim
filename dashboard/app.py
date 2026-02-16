@@ -36,7 +36,7 @@ def list_scenarios():
     result = {}
     for name, shocks in SCENARIOS.items():
         result[name] = [
-            {"name": s.name, "day": s.day, "description": s.description}
+            {"name": s.name, "month": s.month, "description": s.description}
             for s in shocks
         ]
     return jsonify(result)

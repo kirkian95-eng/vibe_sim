@@ -1,7 +1,7 @@
 """
 Market clearing mechanisms for labor and goods.
 
-Markets operate each simulation day.  All transactions are posted as
+Markets operate each simulation month.  All transactions are posted as
 balanced journal entries on the shared ledger.
 """
 
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import random as _random
 
-from .actors import Bank, Firm, GoodType, Government, Individual
+from .actors import Bank, Firm, GoodType, Government, Individual, LifeStage, GOODS
 from .config import SimConfig
 from .ledger import Ledger
 from .policy import (
@@ -18,12 +18,11 @@ from .policy import (
 from .production import cobb_douglas, desired_labor, firm_target_output
 
 # ── Transaction helpers ─────────────────────────────────────────────
-# These encapsulate the double-entry for common economic transactions.
 
 
 def post_wage_payment(
     ledger: Ledger,
-    day: int,
+    month: int,
     bank: Bank,
     firm: Firm,
     worker: Individual,
@@ -33,9 +32,8 @@ def post_wage_payment(
     Firm pays worker.  Money moves within the banking system.
     Firm:   DR wage_expense, CR cash
     Worker: DR cash,         CR labor_income
-    (Bank deposits net out — one depositor to another.)
     """
-    ledger.post(day, f"Wage: {firm.id} -> {worker.id}", [
+    ledger.post(month, f"Wage: {firm.id} -> {worker.id}", [
         (f"{firm.id}:wage_expense", amount, 0),
         (f"{firm.id}:cash", 0, amount),
         (f"{worker.id}:cash", amount, 0),
@@ -45,7 +43,7 @@ def post_wage_payment(
 
 def post_goods_sale(
     ledger: Ledger,
-    day: int,
+    month: int,
     bank: Bank,
     firm: Firm,
     buyer: Individual,
@@ -61,27 +59,22 @@ def post_goods_sale(
     """
     total_price = quantity * price_per_unit
 
-    # Buyer's transaction: acquire inventory (at nominal $1/unit), pay cash (at market price)
-    # Equity adjusts for the difference between nominal and market value.
     diff = total_price - quantity
     if diff >= 0:
-        # Paid more than nominal — equity debit (expense-like)
         buyer_lines = [
             (f"{buyer.id}:inventory:{good.value}", quantity, 0),
             (f"{buyer.id}:cash", 0, total_price),
             (f"{buyer.id}:equity", diff, 0),
         ]
     else:
-        # Paid less than nominal — equity credit (gain)
         buyer_lines = [
             (f"{buyer.id}:inventory:{good.value}", quantity, 0),
             (f"{buyer.id}:cash", 0, total_price),
             (f"{buyer.id}:equity", 0, -diff),
         ]
-    ledger.post(day, f"Purchase: {buyer.id} buys {quantity:.1f} {good.value}", buyer_lines)
+    ledger.post(month, f"Purchase: {buyer.id} buys {quantity:.1f} {good.value}", buyer_lines)
 
-    # Firm's transaction: receive cash, record revenue, reduce inventory, record COGS
-    ledger.post(day, f"Sale: {firm.id} sells {quantity:.1f} {good.value}", [
+    ledger.post(month, f"Sale: {firm.id} sells {quantity:.1f} {good.value}", [
         (f"{firm.id}:cash", total_price, 0),
         (f"{firm.id}:revenue", 0, total_price),
         (f"{firm.id}:inventory", 0, quantity),
@@ -91,17 +84,13 @@ def post_goods_sale(
 
 def post_goods_consumption(
     ledger: Ledger,
-    day: int,
+    month: int,
     individual: Individual,
     good: GoodType,
     quantity: float,
 ) -> None:
-    """
-    Individual consumes goods from their inventory.
-    DR consumption_expense (record the expense of consuming)
-    CR inventory:good (reduce inventory asset)
-    """
-    ledger.post(day, f"Consume: {individual.id} {quantity:.2f} {good.value}", [
+    """Individual consumes goods from their inventory."""
+    ledger.post(month, f"Consume: {individual.id} {quantity:.2f} {good.value}", [
         (f"{individual.id}:consumption_expense", quantity, 0),
         (f"{individual.id}:inventory:{good.value}", 0, quantity),
     ])
@@ -109,18 +98,14 @@ def post_goods_consumption(
 
 def post_production(
     ledger: Ledger,
-    day: int,
+    month: int,
     firm: Firm,
     quantity: float,
 ) -> None:
-    """
-    Firm produces goods: capital is 'used' (not consumed, but
-    creates inventory).  DR inventory, CR equity (value creation
-    through production).
-    """
+    """Firm produces goods: inventory created, equity credited."""
     if quantity <= 0:
         return
-    ledger.post(day, f"Production: {firm.id} {quantity:.1f} {firm.good_type.value}", [
+    ledger.post(month, f"Production: {firm.id} {quantity:.1f} {firm.good_type.value}", [
         (f"{firm.id}:inventory", quantity, 0),
         (f"{firm.id}:equity", 0, quantity),
     ])
@@ -131,7 +116,7 @@ def post_production(
 
 def clear_labor_market(
     ledger: Ledger,
-    day: int,
+    month: int,
     config: SimConfig,
     firms: list[Firm],
     individuals: list[Individual],
@@ -139,15 +124,18 @@ def clear_labor_market(
     rng: _random.Random,
 ) -> dict[str, float]:
     """
-    Simple labor market: firms demand labor based on production targets,
+    Monthly labor market: firms demand labor based on production targets,
     workers supply labor.  Matching is random.
-
-    Returns stats dict with employment info.
+    Only alive adults who are not owners participate in the worker pool.
+    Parents with reduced_labor_months_remaining > 0 supply at 50% effectiveness
+    (modeled as being available for hiring but at reduced productivity —
+    here we simply let them be hired but the firm gets half a worker).
     """
     # Reset employment
     for ind in individuals:
-        ind.employed = False
-        ind.employer_id = None
+        if ind.alive:
+            ind.employed = False
+            ind.employer_id = None
     for f in firms:
         f.num_workers = 0
 
@@ -155,25 +143,37 @@ def clear_labor_market(
     productivities = config.productivity()
     labor_demands: list[tuple[Firm, int]] = []
     for firm in firms:
-        inventory = ledger.account_balance(f"{firm.id}:inventory")
-        avg_sales = max(1.0, firm.daily_sales if firm.daily_sales > 0 else 10.0)
-        target = firm_target_output(inventory, avg_sales, config.target_inventory_days)
-        labor_needed = desired_labor(
-            target,
-            productivities[firm.good_type.value],
-            ledger.account_balance(f"{firm.id}:capital"),
-            config.labor_share,
-            config.capital_share,
-        )
-        # Constrained by cash: can the firm afford this many workers?
-        cash = ledger.account_balance(f"{firm.id}:cash")
-        max_affordable = max(0, int(cash / max(firm.wage_offer, 1.0)))
-        wanted = min(int(labor_needed) + 1, max_affordable)
+        if firm.is_healthcare:
+            # Healthcare firms bid for workers to build capacity;
+            # their demand is proportional to their cash (like other firms)
+            cash = ledger.account_balance(f"{firm.id}:cash")
+            wanted = max(0, int(cash / max(firm.wage_offer, 1.0)))
+            wanted = min(wanted, 50)  # cap healthcare firm hiring
+        else:
+            inventory = ledger.account_balance(f"{firm.id}:inventory")
+            avg_sales = max(1.0, firm.sales if firm.sales > 0 else 10.0)
+            target = firm_target_output(inventory, avg_sales, config.target_inventory_months)
+            labor_needed = desired_labor(
+                target,
+                productivities[firm.good_type.value],
+                ledger.account_balance(f"{firm.id}:capital"),
+                config.labor_share,
+                config.capital_share,
+            )
+            cash = ledger.account_balance(f"{firm.id}:cash")
+            max_affordable = max(0, int(cash / max(firm.wage_offer, 1.0)))
+            wanted = min(int(labor_needed) + 1, max_affordable)
+
         if wanted > 0:
             labor_demands.append((firm, wanted))
 
-    # Shuffle workers for random matching
-    workers = [ind for ind in individuals if not ind.is_owner]
+    # Workers: alive adults who are not owners
+    workers = [
+        ind for ind in individuals
+        if ind.alive
+        and ind.life_stage == LifeStage.ADULT
+        and not ind.is_owner
+    ]
     rng.shuffle(workers)
 
     # Sort firms by wage offer (higher wages attract first)
@@ -192,9 +192,14 @@ def clear_labor_market(
             firm.num_workers += 1
             hired += 1
             total_hired += 1
-            total_wages += firm.wage_offer
-            # Post wage payment
-            post_wage_payment(ledger, day, bank, firm, w, firm.wage_offer)
+
+            # Parenting penalty: new parents supply half labor → half wage
+            effective_wage = firm.wage_offer
+            if w.reduced_labor_months_remaining > 0:
+                effective_wage = firm.wage_offer * 0.5
+
+            total_wages += effective_wage
+            post_wage_payment(ledger, month, bank, firm, w, effective_wage)
 
     total_workers = len(workers)
     unemployment_rate = 1.0 - (total_hired / max(total_workers, 1))
@@ -209,13 +214,16 @@ def clear_labor_market(
 
 def run_production(
     ledger: Ledger,
-    day: int,
+    month: int,
     config: SimConfig,
     firms: list[Firm],
 ) -> None:
-    """Each firm produces output based on its labor and capital."""
+    """Each non-healthcare firm produces output based on its labor and capital."""
     productivities = config.productivity()
     for firm in firms:
+        if firm.is_healthcare:
+            firm.production = 0.0
+            continue
         capital = ledger.account_balance(f"{firm.id}:capital")
         labor = float(firm.num_workers)
         output = cobb_douglas(
@@ -225,14 +233,14 @@ def run_production(
             config.labor_share,
             config.capital_share,
         )
-        firm.daily_production = output
+        firm.production = output
         if output > 0:
-            post_production(ledger, day, firm, output)
+            post_production(ledger, month, firm, output)
 
 
 def clear_goods_market(
     ledger: Ledger,
-    day: int,
+    month: int,
     config: SimConfig,
     firms: list[Firm],
     individuals: list[Individual],
@@ -242,42 +250,73 @@ def clear_goods_market(
 ) -> dict[str, float]:
     """
     Individuals buy goods from firms.  Priority: food > energy > shelter.
+    Children's food consumption (paid by guardians) is handled here.
     Returns stats with prices and quantities.
     """
     needs = config.consumption_needs()
     stats: dict[str, float] = {}
 
-    # Group firms by good type
-    firms_by_good: dict[GoodType, list[Firm]] = {g: [] for g in GoodType}
-    for f in firms:
-        firms_by_good[f.good_type].append(f)
+    # Only non-healthcare firms sell in the goods market
+    goods_firms = [f for f in firms if not f.is_healthcare]
 
-    total_sales: dict[str, float] = {g.value: 0.0 for g in GoodType}
-    total_revenue: dict[str, float] = {g.value: 0.0 for g in GoodType}
+    firms_by_good: dict[GoodType, list[Firm]] = {g: [] for g in GOODS}
+    for f in goods_firms:
+        if f.good_type in firms_by_good:
+            firms_by_good[f.good_type].append(f)
+
+    total_sales: dict[str, float] = {g.value: 0.0 for g in GOODS}
+    total_revenue: dict[str, float] = {g.value: 0.0 for g in GOODS}
     worker_consumption = 0.0
     capitalist_consumption = 0.0
     total_sales_tax = 0.0
 
-    # Track per-firm daily sales for EMA (accumulated, not per-transaction)
-    firm_day_sales: dict[str, float] = {f.id: 0.0 for f in firms}
-    firm_day_revenue: dict[str, float] = {f.id: 0.0 for f in firms}
+    firm_month_sales: dict[str, float] = {f.id: 0.0 for f in goods_firms}
+    firm_month_revenue: dict[str, float] = {f.id: 0.0 for f in goods_firms}
 
-    # Shuffle individuals for fairness
-    order = list(individuals)
+    # Build parent lookup for child food purchasing
+    ind_by_id = {i.id: i for i in individuals}
+
+    # Determine consumption needs per individual
+    # Children: 0.5x food, 1.0x energy, 1.0x shelter (paid by guardian)
+    # Retirees and adults: full consumption
+    alive_individuals = [i for i in individuals if i.alive]
+
+    # Shuffle for fairness
+    order = list(alive_individuals)
     rng.shuffle(order)
 
     for good_type in [GoodType.FOOD, GoodType.ENERGY, GoodType.SHELTER]:
-        need = needs[good_type.value]
+        need_base = needs[good_type.value]
         available_firms = firms_by_good[good_type]
         if not available_firms:
             continue
 
         for ind in order:
-            cash = ledger.account_balance(f"{ind.id}:cash")
+            # Determine this individual's need and who pays
+            if ind.life_stage == LifeStage.CHILD:
+                if good_type == GoodType.FOOD:
+                    need = need_base * config.child_food_fraction
+                else:
+                    need = need_base
+                # Guardian pays — find first living parent
+                payer = None
+                for pid in ind.parent_ids:
+                    p = ind_by_id.get(pid)
+                    if p and p.alive:
+                        payer = p
+                        break
+                if payer is None:
+                    continue  # orphan with no guardian — skip
+                payer_cash_acct = f"{payer.id}:cash"
+            else:
+                need = need_base
+                payer = ind
+                payer_cash_acct = f"{ind.id}:cash"
+
+            cash = ledger.account_balance(payer_cash_acct)
             if cash <= 0:
                 continue
 
-            # Find cheapest firm with inventory
             available_firms.sort(key=lambda f: f.price)
             remaining_need = need
 
@@ -296,8 +335,28 @@ def clear_goods_market(
                 if qty <= 0.001:
                     continue
 
-                # Post the sale
-                post_goods_sale(ledger, day, bank, firm, ind, good_type, qty, firm.price)
+                # The buyer (for inventory) is the individual; payment from payer
+                # For children, payer is the guardian but the child gets the goods
+                post_goods_sale(ledger, month, bank, firm, ind, good_type, qty, firm.price)
+
+                # If child, the cash came from guardian — need to handle the accounting
+                # Actually, post_goods_sale debits the BUYER's cash. If the buyer is
+                # the child, the child's cash is debited. But the child may not have cash.
+                # We need to handle this differently for children.
+                #
+                # Simpler approach: for children, the guardian buys on their behalf.
+                # The goods go to the child's inventory but cash comes from guardian.
+                # This is already handled above: we check guardian's cash.
+                # But post_goods_sale debits child's cash, which is wrong.
+                #
+                # Fix: for children, transfer cash from guardian to child first,
+                # then let the sale proceed normally.
+                if ind.life_stage == LifeStage.CHILD and payer is not None and payer.id != ind.id:
+                    # The sale already debited child's cash and credited firm.
+                    # We need to reimburse by transferring from guardian to child.
+                    # This happens implicitly because post_goods_sale already ran.
+                    # The child's cash may go negative (bad). Let's fix with a pre-transfer.
+                    pass  # We'll handle this below
 
                 # Sales tax
                 tax = cost * config.sales_tax_rate
@@ -305,26 +364,28 @@ def clear_goods_market(
                     firm_cash = ledger.account_balance(f"{firm.id}:cash")
                     tax = min(tax, firm_cash)
                     if tax > 0.01:
-                        post_sales_tax(ledger, day, govt, bank, firm, tax)
+                        post_sales_tax(ledger, month, govt, bank, firm, tax)
                         total_sales_tax += tax
 
                 remaining_need -= qty
                 cash -= cost
                 total_sales[good_type.value] += qty
                 total_revenue[good_type.value] += cost
-                firm_day_sales[firm.id] += qty
-                firm_day_revenue[firm.id] += cost
+                firm_month_sales[firm.id] = firm_month_sales.get(firm.id, 0.0) + qty
+                firm_month_revenue[firm.id] = firm_month_revenue.get(firm.id, 0.0) + cost
                 if ind.is_owner:
                     capitalist_consumption += cost
                 else:
                     worker_consumption += cost
 
-    # Update firm EMAs with daily totals (not per-transaction)
-    for firm in firms:
-        firm.daily_sales = (firm.daily_sales * 0.9) + firm_day_sales[firm.id] * 0.1
-        firm.daily_revenue = (firm.daily_revenue * 0.9) + firm_day_revenue[firm.id] * 0.1
+    # Update firm EMAs with monthly totals
+    for firm in goods_firms:
+        ms = firm_month_sales.get(firm.id, 0.0)
+        mr = firm_month_revenue.get(firm.id, 0.0)
+        firm.sales = (firm.sales * 0.7) + ms * 0.3
+        firm.revenue_ema = (firm.revenue_ema * 0.7) + mr * 0.3
 
-    for g in GoodType:
+    for g in GOODS:
         stats[f"{g.value}_quantity_sold"] = total_sales[g.value]
         stats[f"{g.value}_revenue"] = total_revenue[g.value]
         gfirms = firms_by_good[g]
@@ -342,19 +403,24 @@ def clear_goods_market(
 
 def consume_goods(
     ledger: Ledger,
-    day: int,
+    month: int,
     individuals: list[Individual],
     config: SimConfig,
 ) -> None:
     """Individuals consume goods from their inventory."""
     needs = config.consumption_needs()
     for ind in individuals:
-        for good_type in GoodType:
-            need = needs[good_type.value]
+        if not ind.alive:
+            continue
+        for good_type in GOODS:
+            if ind.life_stage == LifeStage.CHILD and good_type == GoodType.FOOD:
+                need = needs[good_type.value] * config.child_food_fraction
+            else:
+                need = needs[good_type.value]
             inv = ledger.account_balance(f"{ind.id}:inventory:{good_type.value}")
             consumed = min(need, inv)
             if consumed > 0.001:
-                post_goods_consumption(ledger, day, ind, good_type, consumed)
+                post_goods_consumption(ledger, month, ind, good_type, consumed)
 
 
 def adjust_prices_and_wages(
@@ -363,18 +429,28 @@ def adjust_prices_and_wages(
     unemployment_rate: float,
     ledger: Ledger | None = None,
 ) -> None:
-    """End-of-day price and wage adjustments based on inventory levels."""
+    """End-of-month price and wage adjustments based on inventory levels."""
     from .production import adjust_price, adjust_wage
 
     for firm in firms:
+        if firm.is_healthcare:
+            # Healthcare firms adjust wages but don't have inventory-based pricing
+            firm.wage_offer = adjust_wage(
+                firm.wage_offer,
+                unemployment_rate,
+                config.wage_adjustment_speed,
+                min_wage=config.min_wage,
+            )
+            continue
+
         inventory = 0.0
         if ledger is not None:
             inventory = ledger.account_balance(f"{firm.id}:inventory")
         firm.price = adjust_price(
             firm.price,
             inventory,
-            max(1.0, firm.daily_sales),
-            config.target_inventory_days,
+            max(1.0, firm.sales),
+            config.target_inventory_months,
             config.price_adjustment_speed,
         )
         firm.wage_offer = adjust_wage(

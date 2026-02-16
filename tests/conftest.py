@@ -9,10 +9,10 @@ from engine import SimConfig, Simulation
 
 @pytest.fixture
 def small_sim():
-    """A quick 30-day sim for unit tests."""
+    """A quick 6-month sim for unit tests."""
     config = SimConfig(
         seed=42,
-        num_days=30,
+        num_months=6,
         num_individuals=50,
         num_food_firms=2,
         num_energy_firms=2,
@@ -25,8 +25,8 @@ def small_sim():
 
 @pytest.fixture
 def medium_sim():
-    """A 90-day sim with moderate population."""
-    config = SimConfig(seed=42, num_days=90, num_individuals=50)
+    """A 12-month sim with moderate population."""
+    config = SimConfig(seed=42, num_months=12, num_individuals=50)
     sim = Simulation(config)
     sim.run()
     return sim

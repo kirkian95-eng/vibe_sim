@@ -26,27 +26,28 @@ def run_demo():
     from engine.shocks import SCENARIOS
 
     print("=" * 70)
-    print("VibeSim Demo — Baseline vs Stimulus Comparison")
+    print("VibeSim v0.2 Demo — Baseline vs Stimulus Comparison")
     print("=" * 70)
 
     config = SimConfig(
-        num_days=180,
+        num_months=24,
         seed=42,
-        num_individuals=500,
-        num_food_firms=4,
-        num_energy_firms=3,
-        num_shelter_firms=3,
+        num_individuals=50,
+        num_food_firms=2,
+        num_energy_firms=2,
+        num_shelter_firms=2,
     )
 
     # Baseline
-    print("\n[1/2] Running baseline scenario...")
+    print("\n[1/2] Running baseline scenario (24 months)...")
     baseline = Simulation(config)
     baseline_results = baseline.run()
     baseline_final = baseline_results[-1]
 
-    print(f"  ✓ Complete: {baseline.ledger.journal_size} journal entries")
+    print(f"  Complete: {baseline.ledger.journal_size} journal entries")
     print(f"  Final GDP: ${baseline_final.gdp:,.0f}")
     print(f"  Unemployment: {baseline_final.unemployment_rate:.1%}")
+    print(f"  Population: {baseline_final.population}")
     print(f"  Gini coefficient: {baseline_final.gini_coefficient:.3f}")
     print(f"  Accounting valid: {baseline.results_summary()['accounting_valid']}")
 
@@ -56,7 +57,7 @@ def run_demo():
     stimulus_results = stimulus.run()
     stimulus_final = stimulus_results[-1]
 
-    print(f"  ✓ Complete: {stimulus.ledger.journal_size} journal entries")
+    print(f"  Complete: {stimulus.ledger.journal_size} journal entries")
     print(f"  Shocks applied: {', '.join(stimulus.shock_log)}")
     print(f"  Final GDP: ${stimulus_final.gdp:,.0f}")
     print(f"  Unemployment: {stimulus_final.unemployment_rate:.1%}")
@@ -67,7 +68,10 @@ def run_demo():
     print("\n" + "=" * 70)
     print("Comparison (Stimulus vs Baseline)")
     print("=" * 70)
-    gdp_change = (stimulus_final.gdp - baseline_final.gdp) / baseline_final.gdp * 100
+    if baseline_final.gdp > 0:
+        gdp_change = (stimulus_final.gdp - baseline_final.gdp) / baseline_final.gdp * 100
+    else:
+        gdp_change = 0.0
     unemp_change = stimulus_final.unemployment_rate - baseline_final.unemployment_rate
     gini_change = stimulus_final.gini_coefficient - baseline_final.gini_coefficient
 
@@ -75,15 +79,6 @@ def run_demo():
     print(f"  Unemployment change: {unemp_change:+.1%} percentage points")
     print(f"  Gini change: {gini_change:+.3f}")
     print()
-    print("Interpretation:")
-    if gdp_change > 0:
-        print("  → Stimulus spending increased economic output")
-    if unemp_change < 0:
-        print("  → Stimulus reduced unemployment")
-    if gini_change < 0:
-        print("  → Stimulus reduced inequality")
-    elif gini_change > 0:
-        print("  → Stimulus increased inequality")
 
     print("\n" + "=" * 70)
     print("Demo complete! Run 'python run.py' to launch the dashboard.")

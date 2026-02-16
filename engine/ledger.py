@@ -255,7 +255,7 @@ class Ledger:
         return all(entry.is_balanced() for entry in self._journal)
 
     def check_entries_balanced_from(self, start_idx: int) -> bool:
-        """Check balance only for entries from start_idx onward (fast daily check)."""
+        """Check balance only for entries from start_idx onward (fast incremental check)."""
         for i in range(start_idx, len(self._journal)):
             if not self._journal[i].is_balanced():
                 return False
