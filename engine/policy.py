@@ -202,10 +202,11 @@ def post_shelter_purchase_from_govt(
     """
     Individual buys shelter from government (infinite supply, fixed price).
 
-    TRADEOFF: Shelter is temporarily an infinitely-available good at fixed price.
-    Payments transfer to govt (no money destruction — avoids deflation).
-    To revert to market-based shelter, remove this path and restore the shelter
-    firm loop in clear_goods_market (markets.py).
+    Shelter payments destroy money (like taxes), routing through the bank's
+    deposits/reserves.  The government creates fresh money through its spending
+    channels (transfers, pensions, govt spending).  This prevents the government
+    from hoarding shelter revenue indefinitely, which would drain money from
+    the private economy and cause deflation.
     """
     total = quantity * price_per_unit
     if total <= 0 or quantity <= 0:
@@ -217,7 +218,9 @@ def post_shelter_purchase_from_govt(
             (f"{ind.id}:inventory:shelter", quantity, 0),
             (f"{ind.id}:cash", 0, total),
             (f"{ind.id}:equity", diff, 0),
-            (f"{govt.id}:cash", total, 0),
+            (f"{bank.id}:deposits", total, 0),
+            (f"{bank.id}:reserves", 0, total),
+            (f"{govt.id}:currency_issued", total, 0),
             (f"{govt.id}:shelter_revenue", 0, total),
         ]
     else:
@@ -225,7 +228,9 @@ def post_shelter_purchase_from_govt(
             (f"{ind.id}:inventory:shelter", quantity, 0),
             (f"{ind.id}:cash", 0, total),
             (f"{ind.id}:equity", 0, -diff),
-            (f"{govt.id}:cash", total, 0),
+            (f"{bank.id}:deposits", total, 0),
+            (f"{bank.id}:reserves", 0, total),
+            (f"{govt.id}:currency_issued", total, 0),
             (f"{govt.id}:shelter_revenue", 0, total),
         ]
     ledger.post(
@@ -308,7 +313,7 @@ def government_operations(
         transfers_to_households += amount
 
     # General government spending (purchases from non-healthcare firms)
-    # Use treasury (shelter revenue) first to recycle money; create new money if needed
+    # Use treasury first to recycle money; create new money if needed
     non_hc_firms = [f for f in firms if not f.is_healthcare and f.good_type != GoodType.SHELTER]
     if config.monthly_govt_spending > 0 and non_hc_firms:
         per_firm = config.monthly_govt_spending / len(non_hc_firms)
