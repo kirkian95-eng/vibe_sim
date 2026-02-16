@@ -1,12 +1,14 @@
 future ideas
 
-v0.2 - ages and stages (LIVE)
+v0.2 - "ages and stages" (LIVE)
    add age variable for individuals
    create children and retirees
    add healthcare insitution 
 
-v0.21 - graphs for nerds
-   add dashboard for tracking CPI, unemployment, GDP, etc.
+v0.21 - graphs for nerds (LIVE, needs work)
+   improve usefulness of dashboard for tracking CPI, unemployment, GDP, etc.
+
+v0.22 - shelter nerf. temporarily removed shelter price changes and made all shelter costs go to government. will fix in next update alongside shelter overhaul.
 
 v0.3 - shelter overhaul
    add housing market and property development
