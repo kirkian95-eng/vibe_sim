@@ -109,6 +109,7 @@ Each simulated month follows this cycle:
 ### Money Creation (MMT)
 
 - Government spending **creates** money (credits bank deposits)
+- Bank **lends** to firms (and individuals) short on deposits — payroll loans, etc.
 - Taxation **destroys** money (debits deposits)
 - The government deficit = net money injected into the private sector
 - Bonds convert deposits into bond assets (financial portfolio rebalancing)
@@ -126,7 +127,7 @@ Standard Cobb-Douglas with diminishing returns.
 - **Children** (< 18 years): Don't work, consume 50% of adult food (paid by guardian)
 - **Adults** (18–64): Work, consume, may have children
 - **Retirees** (65+): Receive pensions, consume, face mortality risk from age 72
-- **Fertility**: ~1% annual growth rate, 12-month cooldown, parenting labor penalty
+- **Fertility**: ~2% annual growth rate, 12-month cooldown, parenting labor penalty
 - **Mortality**: Constant hazard from age 72, calibrated for average death at 80
 
 ## Scenario Shocks

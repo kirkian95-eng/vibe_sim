@@ -21,6 +21,28 @@ from .production import cobb_douglas, desired_labor, firm_target_output
 # ── Transaction helpers ─────────────────────────────────────────────
 
 
+def post_payroll_loan(
+    ledger: Ledger,
+    month: int,
+    bank: Bank,
+    firm: Firm,
+    amount: float,
+) -> None:
+    """
+    Bank extends a loan to a firm short on deposits. Creates new bank credit.
+    Bank: DR loans_receivable, CR deposits
+    Firm: DR cash (deposits), CR loans_payable
+    """
+    if amount <= 0:
+        return
+    ledger.post(month, f"Payroll loan: {bank.id} -> {firm.id}", [
+        (f"{bank.id}:loans_receivable", amount, 0),
+        (f"{bank.id}:deposits", 0, amount),
+        (f"{firm.id}:cash", amount, 0),
+        (f"{firm.id}:loans_payable", 0, amount),
+    ])
+
+
 def post_wage_payment(
     ledger: Ledger,
     month: int,
@@ -30,10 +52,13 @@ def post_wage_payment(
     amount: float,
 ) -> None:
     """
-    Firm pays worker.  Money moves within the banking system.
-    Firm:   DR wage_expense, CR cash
-    Worker: DR cash,         CR labor_income
+    Firm pays worker from its deposits. If firm is short, bank extends a
+    payroll loan first. Money moves within the banking system.
     """
+    cash = ledger.account_balance(f"{firm.id}:cash")
+    shortfall = amount - cash
+    if shortfall > 0.01:
+        post_payroll_loan(ledger, month, bank, firm, shortfall)
     ledger.post(month, f"Wage: {firm.id} -> {worker.id}", [
         (f"{firm.id}:wage_expense", amount, 0),
         (f"{firm.id}:cash", 0, amount),
@@ -156,12 +181,11 @@ def clear_labor_market(
         if firm.good_type == GoodType.SHELTER:
             continue  # govt provides shelter; don't waste labor
         if firm.is_healthcare:
-            # Cap healthcare hiring to match demand (elder visits)
+            # Cap healthcare hiring to match demand (elder visits). Bank lends if short on deposits.
             retirees = sum(1 for i in individuals if i.alive and i.life_stage == LifeStage.RETIRED)
             workers_needed = max(1, (retirees + config.healthcare_productivity - 1) // config.healthcare_productivity)
             per_firm = max(1, (workers_needed + num_hc - 1) // num_hc) if num_hc else 1
-            cash = ledger.account_balance(f"{firm.id}:cash")
-            wanted = max(1, min(int(cash / max(firm.wage_offer, 1.0)), per_firm))
+            wanted = max(1, per_firm)
         else:
             inventory = ledger.account_balance(f"{firm.id}:inventory")
             # Demand-driven target: expected sales = consumption demand / firms producing this good
@@ -190,9 +214,9 @@ def clear_labor_market(
                 config.labor_share,
                 config.capital_share,
             )
-            cash = ledger.account_balance(f"{firm.id}:cash")
-            max_affordable = max(0, int(cash / max(firm.wage_offer, 1.0)))
-            raw_wanted = min(max(int(labor_needed) + 1, 1), max_affordable)
+            # Labor demand is driven by production need. Bank extends payroll loans when
+            # firms are short on deposits, so cash is not a binding constraint.
+            raw_wanted = max(int(labor_needed) + 1, 1)
             # Cap so healthcare gets headroom; ~1.2x fair share leaves workers for healthcare
             wanted = min(raw_wanted, max(1, int(workers_per_firm_cap * 1.2)))
 

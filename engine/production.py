@@ -49,13 +49,17 @@ def firm_target_output(
 ) -> float:
     """
     Firms target enough inventory to cover target_inventory_months of sales,
-    producing the shortfall. When inventory greatly exceeds target, reduce or
-    halt production to avoid glut and deflationary spiral.
+    producing the shortfall. Always produce at least replacement (avg_sales)
+    unless inventory is massively in excess (>2x target), to avoid hiring
+    collapse and wage spiral when drawing down a glut.
     """
     target_inventory = avg_monthly_sales * target_inventory_months
     shortfall = target_inventory - current_inventory
     target = avg_monthly_sales + shortfall * 0.2
-    return max(0.0, target)
+    ratio = current_inventory / target_inventory if target_inventory > 0 else 0
+    # When near or below target, always replace sales. Only allow draw-down when glut > 2x.
+    floor = 0.0 if ratio >= 2.0 else avg_monthly_sales
+    return max(floor, target)
 
 
 def adjust_price(

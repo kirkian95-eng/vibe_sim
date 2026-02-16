@@ -55,6 +55,7 @@ from .policy import (
     healthcare_operations,
     pension_operations,
     post_government_spending,
+    repay_firm_loans,
 )
 from .shocks import Shock
 
@@ -283,8 +284,9 @@ class Simulation:
         consume_goods(self.ledger, self.month, self.individuals, cfg)
         self._profile("consumption", time.perf_counter() - t0)
 
-        # 12. Firm profit distribution
+        # 12. Firm loan repayment, then profit distribution
         t0 = time.perf_counter()
+        repay_firm_loans(self.ledger, self.month, self.firms, self.bank)
         total_profit_dist = firm_profit_distribution(
             self.ledger, self.month, cfg, self.firms,
             self.individuals, self.bank,

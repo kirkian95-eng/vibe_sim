@@ -36,9 +36,9 @@ class SimConfig:
     num_healthcare_firms: int = 1
 
     # ── Production (Cobb-Douglas) ─────────────────────────────────
-    # Calibrated so full employment produces ~1.2x demand (stable prices)
-    food_productivity: float = 5.0
-    energy_productivity: float = 4.0
+    # Calibrated so meeting demand requires most of labor force (~5% unemployment)
+    food_productivity: float = 2.2
+    energy_productivity: float = 1.8
     shelter_productivity: float = 0.8
     healthcare_productivity: float = 5.0  # visits per worker per month
     labor_share: float = 0.7

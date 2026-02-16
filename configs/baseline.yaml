@@ -16,8 +16,8 @@ num_shelter_firms: 0  # govt provides shelter
 num_healthcare_firms: 1
 
 # Production (Cobb-Douglas) - calibrated for stable supply/demand balance
-food_productivity: 5.0
-energy_productivity: 4.0
+food_productivity: 2.2
+energy_productivity: 1.8
 shelter_productivity: 0.8
 healthcare_productivity: 5.0
 labor_share: 0.7

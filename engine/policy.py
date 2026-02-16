@@ -420,6 +420,32 @@ def healthcare_operations(
     }
 
 
+def repay_firm_loans(
+    ledger: Ledger,
+    month: int,
+    firms: list[Firm],
+    bank: Bank,
+) -> float:
+    """
+    Firms repay bank loans from excess deposits. Reduces loans_payable and cash.
+    Returns total repaid.
+    """
+    total_repaid = 0.0
+    for firm in firms:
+        cash = ledger.account_balance(f"{firm.id}:cash")
+        loans = ledger.account_balance(f"{firm.id}:loans_payable")
+        repay = min(max(0, cash), max(0, loans))
+        if repay > 0.01:
+            ledger.post(month, f"Loan repayment: {firm.id} -> {bank.id}", [
+                (f"{firm.id}:cash", 0, repay),
+                (f"{firm.id}:loans_payable", repay, 0),
+                (f"{bank.id}:loans_receivable", 0, repay),
+                (f"{bank.id}:deposits", repay, 0),
+            ])
+            total_repaid += repay
+    return total_repaid
+
+
 def firm_profit_distribution(
     ledger: Ledger,
     month: int,

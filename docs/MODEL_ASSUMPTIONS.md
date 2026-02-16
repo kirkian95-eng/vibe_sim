@@ -12,7 +12,7 @@ affect a simulated economy. It models a closed economy with:
 
 - **Individuals** who are born, age, work, retire, and die
 - **Firms** — one per good type (food, energy, healthcare). Shelter is govt-provided. Firms use labor and capital; they do not compete strategically — prices adjust reactively to inventory.
-- **A bank** that intermediates financial flows
+- **A bank** that intermediates financial flows and extends loans to firms (and individuals) short on deposits
 - **A government** that spends money into existence, collects taxes, pays pensions, funds healthcare, and issues bonds
 
 The simulation is designed for experimentation, not forecasting. Default
@@ -30,9 +30,15 @@ VibeSim follows a Modern Monetary Theory framework:
 - Taxation manages aggregate demand, not "funding"
 - Government bonds allow deposit holders to swap cash for interest-bearing assets
 
+### Bank Lending
+
+Firms and individuals hold deposits at the bank. When short on cash (e.g. payroll),
+the bank extends loans: Bank DR loans_receivable, CR deposits; Firm DR cash, CR loans_payable.
+Loan creation expands bank credit (deposits). Firms repay from excess cash each month.
+
 ### What Is NOT Modelled
 
-- **Bank lending / credit creation**: The bank is a pure intermediary; money supply is determined entirely by fiscal policy.
+- **Interest on bank loans**: Loan principal is tracked but interest is not charged yet.
 - **Interest on reserves / deposits**: The rate parameter exists but isn't applied yet.
 - **Capital accumulation**: Firms cannot invest in new capital; capital stock is fixed at startup.
 - **Depreciation**: Capital doesn't decay over time.
@@ -201,37 +207,35 @@ resets monthly (no contracts).
 5. Sales tax collected per transaction
 6. Guardians purchase food for their children (at 50% of adult quantity)
 
-**Limitations**: Fixed monthly needs (no demand elasticity), no credit
-purchases, no saving/investment optimization.
+**Limitations**: Fixed monthly needs (no demand elasticity), no consumer
+credit for purchases, no saving/investment optimization.
 
 ---
 
 ## 9. Known Limitations
 
 ### Structural
-1. **No bank lending** — money supply determined entirely by fiscal policy
-2. **No capital accumulation** — firms cannot invest in new capital
-3. **No depreciation** — capital doesn't decay
-4. **Single bank** — no interbank market
-5. **Closed economy** — no trade or exchange rates
+1. **Capital accumulation** — firms cannot invest in new capital; stock is fixed
+2. **No depreciation** — capital doesn't decay
+3. **Single bank** — no interbank market
+4. **Closed economy** — no trade or exchange rates
 
 ### Behavioral
-6. **No expectations** — agents use simple adaptive rules
-7. **Fixed consumption needs** — no demand elasticity or luxury goods
-8. **Homogeneous labor** — all workers identical
-9. **Monthly employment reset** — no hiring/firing costs
+5. **No expectations** — agents use simple adaptive rules
+6. **Fixed consumption needs** — no demand elasticity or luxury goods
+7. **Homogeneous labor** — all workers identical
+8. **Monthly employment reset** — no hiring/firing costs
 
 ### Numerical
-10. **Float64 precision** — over very long runs (1,000+ months) with many
+9. **Float64 precision** — over very long runs (1,000+ months) with many
     agents, accumulated rounding may approach tolerance thresholds
-11. **Inventory at $1/unit** — creates equity adjustments on every sale
+10. **Inventory at $1/unit** — creates equity adjustments on every sale
     when market price differs from nominal
 
 ---
 
 ## 10. Planned Extensions
 
-- Bank lending and endogenous credit creation
 - Capital investment with an accelerator mechanism
 - Depreciation requiring reinvestment
 - Interest rate policy (policy rate targeting)
