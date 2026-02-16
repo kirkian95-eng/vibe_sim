@@ -32,7 +32,7 @@ class SimConfig:
     # ── Firms ───────────────────────────────────────────────────────
     num_food_firms: int = 4
     num_energy_firms: int = 3
-    num_shelter_firms: int = 3
+    num_shelter_firms: int = 0  # govt provides shelter; set 0 to avoid unused firms
     num_healthcare_firms: int = 2
 
     # ── Production (Cobb-Douglas) ─────────────────────────────────
@@ -45,7 +45,7 @@ class SimConfig:
     capital_share: float = 0.3
 
     # ── Initial endowments ──────────────────────────────────────────
-    initial_firm_cash: float = 50_000.0
+    initial_firm_cash: float = 200_000.0  # enough to hire for demand-driven cold start (~95%)
     initial_firm_capital: float = 100.0
     initial_firm_inventory: float = 50.0
     initial_individual_cash: float = 500.0  # flat fallback; overridden by age-based
@@ -62,8 +62,8 @@ class SimConfig:
     initial_food_price: float = 150.0
     initial_energy_price: float = 120.0
     initial_shelter_price: float = 600.0
-    # Shelter: temporarily fixed-price govt provision (see markets.py TRADEOFF)
-    shelter_fixed_price: float = 600.0
+    # Shelter: fixed-price govt provision, ~30% of monthly wage (see markets.py TRADEOFF)
+    shelter_fixed_price: float = 720.0  # 0.3 * initial_wage
 
     # ── Wages (monthly) ─────────────────────────────────────────────
     initial_wage: float = 2400.0
@@ -78,7 +78,8 @@ class SimConfig:
     income_tax_rate: float = 0.20
     sales_tax_rate: float = 0.05
     monthly_govt_transfer: float = 300.0  # per unemployed person per month
-    monthly_govt_spending: float = 150_000.0  # public goods spending per month
+    monthly_govt_spending: float = 150_000.0  # overwritten by scaling; use govt_spending_per_capita to tune
+    govt_spending_per_capita: float | None = None  # if set, scaling uses this; else default 150
 
     # ── Banking ─────────────────────────────────────────────────────
     interest_rate: float = 0.05  # annual

@@ -39,6 +39,7 @@ from .actors import (
 from .bonds import clear_bond_market, pay_bond_interest
 from .config import SimConfig
 from .demographics import advance_ages, run_births, run_deaths
+from .scaling import compute_all_scaled
 from .ledger import Ledger
 from .markets import (
     adjust_prices_and_wages,
@@ -84,7 +85,20 @@ class Simulation:
     """
 
     def __init__(self, config: SimConfig, shocks: list[Shock] | None = None):
-        self.config = config
+        # Scale-invariant: compute all population-scaled values
+        scaled = compute_all_scaled(config)
+        self.config = dc.replace(
+            config,
+            num_food_firms=scaled["firm_counts"]["food"],
+            num_energy_firms=scaled["firm_counts"]["energy"],
+            num_healthcare_firms=scaled["firm_counts"]["healthcare"],
+            monthly_govt_spending=scaled["monthly_govt_spending"],
+            initial_savings_at_retirement=scaled["savings_at_retirement"],
+            childbirth_healthcare_fee=scaled["healthcare_fees"]["childbirth"],
+            elder_healthcare_monthly_cost=scaled["healthcare_fees"]["elder_per_visit"],
+            initial_individual_cash=scaled["newborn_bootstrap"] / 0.1,
+        )
+        self._scaled = scaled
         self.shocks = sorted(shocks or [], key=lambda s: s.month)
         self.rng = random.Random(config.seed)
         self.ledger = Ledger()
@@ -96,17 +110,18 @@ class Simulation:
         self._next_individual_idx: int = 0
         self._bond_rate: float = config.bond_rate_min
 
-        # Create actors
+        # Create actors (using scaled firm counts from self.config)
+        cfg = self.config
         actors = create_all_actors(
             self.ledger,
-            num_individuals=config.num_individuals,
-            num_food_firms=config.num_food_firms,
-            num_energy_firms=config.num_energy_firms,
-            num_shelter_firms=config.num_shelter_firms,
-            num_owners=config.num_owners,
-            initial_prices=config.initial_prices(),
-            initial_wage=config.initial_wage,
-            num_healthcare_firms=config.num_healthcare_firms,
+            num_individuals=cfg.num_individuals,
+            num_food_firms=cfg.num_food_firms,
+            num_energy_firms=cfg.num_energy_firms,
+            num_shelter_firms=cfg.num_shelter_firms,
+            num_owners=cfg.num_owners,
+            initial_prices=cfg.initial_prices(),
+            initial_wage=cfg.initial_wage,
+            num_healthcare_firms=cfg.num_healthcare_firms,
             rng=self.rng,
         )
         self.individuals: list[Individual] = actors["individuals"]
@@ -126,8 +141,11 @@ class Simulation:
         Individuals receive age-proportional initial savings: ~$1 at age 18,
         growing logarithmically to initial_savings_at_retirement at age 65.
         This funds retirees who would otherwise start with $0 and run out of money.
+
+        All endowments are scale-invariant (from scaling.compute_all_scaled).
         """
         cfg = self.config
+        endowments = self._scaled["firm_endowments"]
 
         # Government spending creates initial money for individuals (age-proportional)
         for ind in self.individuals:
@@ -142,23 +160,26 @@ class Simulation:
                     f"Bootstrap: initial cash for {ind.id}",
                 )
 
-        # Government spending creates initial money for firms
+        # Government spending creates initial money for firms (per-good scaled endowments)
         for firm in self.firms:
+            e = endowments.get(firm.good_type.value, endowments.get("healthcare"))
+            cash = e["cash"]
             post_government_spending(
                 self.ledger, 0, self.govt, self.bank, firm.id,
-                cfg.initial_firm_cash,
+                cash,
                 f"Bootstrap: initial cash for {firm.id}",
             )
-            # Initial capital endowment (equity injection)
-            if not firm.is_healthcare:
+            # Initial capital endowment (equity injection) - goods firms only
+            if not firm.is_healthcare and e["capital"] > 0:
                 self.ledger.post(0, f"Bootstrap: capital for {firm.id}", [
-                    (f"{firm.id}:capital", cfg.initial_firm_capital, 0),
-                    (f"{firm.id}:equity", 0, cfg.initial_firm_capital),
+                    (f"{firm.id}:capital", e["capital"], 0),
+                    (f"{firm.id}:equity", 0, e["capital"]),
                 ])
-                # Initial inventory
+            # Initial inventory - goods firms only
+            if not firm.is_healthcare and e["inventory"] > 0:
                 self.ledger.post(0, f"Bootstrap: inventory for {firm.id}", [
-                    (f"{firm.id}:inventory", cfg.initial_firm_inventory, 0),
-                    (f"{firm.id}:equity", 0, cfg.initial_firm_inventory),
+                    (f"{firm.id}:inventory", e["inventory"], 0),
+                    (f"{firm.id}:equity", 0, e["inventory"]),
                 ])
 
     def add_profile_hook(self, hook: Callable[[str, float], None]) -> None:

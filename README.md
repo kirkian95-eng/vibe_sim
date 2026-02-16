@@ -182,7 +182,7 @@ baseline = Simulation(config)
 baseline_results = baseline.run()
 
 # Stimulus
-stim = Simulation(config, shocks=[stimulus_spending(month=6, extra_monthly=300_000)])
+stim = Simulation(config, shocks=[stimulus_spending(month=6, extra_per_capita=300)])
 stim_results = stim.run()
 
 print(f"Baseline GDP: {baseline_results[-1].gdp:.0f}")

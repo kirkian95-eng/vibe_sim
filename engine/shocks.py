@@ -67,14 +67,15 @@ def technology_breakthrough(month: int, sector: str, multiplier: float) -> Shock
     )
 
 
-def stimulus_spending(month: int, extra_monthly: float) -> Shock:
-    """Increase government monthly spending."""
+def stimulus_spending(month: int, extra_per_capita: float) -> Shock:
+    """Increase government monthly spending (per capita, scales with population)."""
     def _apply(cfg: SimConfig) -> SimConfig:
-        return dc.replace(cfg, monthly_govt_spending=cfg.monthly_govt_spending + extra_monthly)
+        extra_total = extra_per_capita * cfg.num_individuals
+        return dc.replace(cfg, monthly_govt_spending=cfg.monthly_govt_spending + extra_total)
     return Shock(
-        name=f"stimulus_{extra_monthly:.0f}",
+        name=f"stimulus_{extra_per_capita:.0f}_pc",
         month=month,
-        description=f"Government monthly spending increased by {extra_monthly:.0f}",
+        description=f"Government monthly spending increased by {extra_per_capita:.0f}/capita",
         apply=_apply,
     )
 
@@ -145,7 +146,7 @@ def shock_from_dict(d: dict) -> Shock | None:
 SCENARIOS: dict[str, list[Shock]] = {
     "baseline": [],
     "stimulus": [
-        stimulus_spending(month=6, extra_monthly=300_000),
+        stimulus_spending(month=6, extra_per_capita=300),
     ],
     "austerity": [
         austerity(month=6, cut_fraction=0.50),
@@ -162,6 +163,6 @@ SCENARIOS: dict[str, list[Shock]] = {
     ],
     "stagflation": [
         energy_crisis(month=6, productivity_drop=0.5),
-        stimulus_spending(month=9, extra_monthly=450_000),
+        stimulus_spending(month=9, extra_per_capita=450),
     ],
 }

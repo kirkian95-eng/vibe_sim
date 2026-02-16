@@ -148,15 +148,37 @@ def clear_labor_market(
         if firm.good_type == GoodType.SHELTER:
             continue  # govt provides shelter; don't waste labor
         if firm.is_healthcare:
-            # Healthcare firms bid for workers to build capacity;
-            # their demand is proportional to their cash (like other firms)
+            # Cap healthcare hiring to match demand (elder visits)
+            retirees = sum(1 for i in individuals if i.alive and i.life_stage == LifeStage.RETIRED)
+            workers_needed = max(1, (retirees + config.healthcare_productivity - 1) // config.healthcare_productivity)
+            per_firm = max(1, (workers_needed + len([f for f in firms if f.is_healthcare]) - 1) // len([f for f in firms if f.is_healthcare]))
             cash = ledger.account_balance(f"{firm.id}:cash")
             wanted = max(0, int(cash / max(firm.wage_offer, 1.0)))
-            wanted = min(wanted, 50)  # cap healthcare firm hiring
+            wanted = min(wanted, per_firm)  # cap to demand, not 50
         else:
             inventory = ledger.account_balance(f"{firm.id}:inventory")
-            avg_sales = max(1.0, firm.sales if firm.sales > 0 else 10.0)
+            # Demand-driven target: expected sales = consumption demand / firms producing this good
+            alive = [i for i in individuals if i.alive]
+            needs = config.consumption_needs()
+            num_children = sum(1 for i in alive if i.life_stage == LifeStage.CHILD)
+            num_adults_retired = len(alive) - num_children
+
+            if firm.good_type == GoodType.FOOD:
+                demand = num_adults_retired * needs["food"] + num_children * needs["food"] * config.child_food_fraction
+                num_firms = len([f for f in firms if f.good_type == GoodType.FOOD])
+            elif firm.good_type == GoodType.ENERGY:
+                demand = len(alive) * needs["energy"]
+                num_firms = len([f for f in firms if f.good_type == GoodType.ENERGY])
+            else:
+                demand = len(alive) * needs.get(firm.good_type.value, 1.0)
+                num_firms = len([f for f in firms if f.good_type == firm.good_type])
+
+            expected_sales = max(1.0, demand / max(1, num_firms))
+            avg_sales = max(1.0, firm.sales if firm.sales > 0 else expected_sales)
             target = firm_target_output(inventory, avg_sales, config.target_inventory_months)
+            # Cold start: with no sales history, target ~4 months of sales to get employment ~95%
+            if firm.sales <= 0:
+                target = max(target, expected_sales * config.target_inventory_months * 2.5)
             labor_needed = desired_labor(
                 target,
                 productivities[firm.good_type.value],
@@ -166,7 +188,7 @@ def clear_labor_market(
             )
             cash = ledger.account_balance(f"{firm.id}:cash")
             max_affordable = max(0, int(cash / max(firm.wage_offer, 1.0)))
-            wanted = min(int(labor_needed) + 1, max_affordable)
+            wanted = min(max(int(labor_needed) + 1, 1), max_affordable)
 
         if wanted > 0:
             labor_demands.append((firm, wanted))

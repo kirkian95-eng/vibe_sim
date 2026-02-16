@@ -35,7 +35,7 @@ def run_demo():
         num_individuals=50,
         num_food_firms=2,
         num_energy_firms=2,
-        num_shelter_firms=2,
+        num_shelter_firms=0,  # govt provides shelter
     )
 
     # Baseline

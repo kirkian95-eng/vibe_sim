@@ -197,7 +197,8 @@ class Government(Actor):
     def create(ledger: Ledger) -> Government:
         actor_id = "govt"
         govt = Government(id=actor_id, actor_type=ActorType.GOVERNMENT)
-        # Assets
+        # Assets (treasury balance for shelter revenue etc; does not destroy money)
+        ledger.create_account(actor_id, "cash", AccountType.ASSET)
         ledger.create_account(actor_id, "tax_receivable", AccountType.ASSET)
         # Liabilities (money is a govt liability)
         ledger.create_account(actor_id, "currency_issued", AccountType.LIABILITY)

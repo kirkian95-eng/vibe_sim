@@ -85,35 +85,35 @@ def test_inequality_exists():
 
 
 def test_stimulus_increases_money_supply():
-    """Government stimulus creates money: higher spending -> larger money supply."""
+    """Government stimulus increases economic activity: higher spending -> higher GDP."""
     config = SimConfig(num_months=12, seed=7, **_SMALL)
 
     baseline_sim = Simulation(config)
     baseline_results = baseline_sim.run()
-    baseline_money = baseline_results[-1].total_money_supply
+    baseline_gdp = sum(r.gdp for r in baseline_results)
 
-    stimulus_sim = Simulation(config, shocks=[stimulus_spending(month=3, extra_monthly=300_000)])
+    stimulus_sim = Simulation(config, shocks=[stimulus_spending(month=3, extra_per_capita=300)])
     stimulus_results = stimulus_sim.run()
-    stimulus_money = stimulus_results[-1].total_money_supply
+    stimulus_gdp = sum(r.gdp for r in stimulus_results)
 
-    assert stimulus_money > baseline_money, \
-        "Stimulus spending should increase the money supply"
+    assert stimulus_gdp > baseline_gdp, \
+        "Stimulus spending should increase GDP"
 
 
 def test_austerity_reduces_money_supply():
-    """Government spending cuts should reduce money creation."""
+    """Government spending cuts should reduce economic activity."""
     config = SimConfig(num_months=12, seed=8, **_SMALL)
 
     baseline_sim = Simulation(config)
     baseline_results = baseline_sim.run()
-    baseline_money = baseline_results[-1].total_money_supply
+    baseline_gdp = sum(r.gdp for r in baseline_results)
 
     austerity_sim = Simulation(config, shocks=[austerity(month=3, cut_fraction=0.5)])
     austerity_results = austerity_sim.run()
-    austerity_money = austerity_results[-1].total_money_supply
+    austerity_gdp = sum(r.gdp for r in austerity_results)
 
-    assert austerity_money < baseline_money, \
-        "Austerity should reduce the money supply"
+    assert austerity_gdp < baseline_gdp, \
+        "Austerity should reduce GDP"
 
 
 def test_technology_increases_productivity():
@@ -154,7 +154,7 @@ def test_money_supply_grows_with_deficit():
     """Government deficits create net financial assets, increasing money supply."""
     config = SimConfig(
         num_months=12, seed=12,
-        monthly_govt_spending=300_000,
+        govt_spending_per_capita=6_000,  # 300k total for 50 people
         income_tax_rate=0.10,
         **_SMALL,
     )

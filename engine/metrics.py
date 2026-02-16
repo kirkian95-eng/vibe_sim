@@ -100,7 +100,7 @@ DailyStats = MonthlyStats
 
 
 def compute_gini(values: list[float]) -> float:
-    """Compute Gini coefficient from a list of values."""
+    """Compute Gini coefficient from a list of values. Capped at 1.0 (negative wealth can exceed 1)."""
     if not values or len(values) < 2:
         return 0.0
     sorted_vals = sorted(values)
@@ -113,7 +113,8 @@ def compute_gini(values: list[float]) -> float:
     for i, v in enumerate(sorted_vals):
         cumulative += v
         gini_sum += (2 * (i + 1) - n - 1) * v
-    return gini_sum / (n * total)
+    gini = gini_sum / (n * total)
+    return min(1.0, max(0.0, gini))  # cap; negative wealth can produce > 1
 
 
 def collect_monthly_stats(

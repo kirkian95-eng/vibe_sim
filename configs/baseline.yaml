@@ -12,7 +12,7 @@ owner_fraction: 0.01
 # Firms
 num_food_firms: 4
 num_energy_firms: 3
-num_shelter_firms: 3
+num_shelter_firms: 0  # govt provides shelter
 num_healthcare_firms: 2
 
 # Production (Cobb-Douglas) - food/energy boosted to meet consumption
@@ -24,7 +24,7 @@ labor_share: 0.7
 capital_share: 0.3
 
 # Initial endowments
-initial_firm_cash: 50000.0
+initial_firm_cash: 200000.0  # enough for demand-driven cold start (~95% employment)
 initial_firm_capital: 100.0
 initial_firm_inventory: 50.0
 initial_individual_cash: 500.0  # flat fallback; age-based used at creation
@@ -42,7 +42,7 @@ initial_food_price: 150.0
 initial_energy_price: 120.0
 initial_shelter_price: 600.0
 # Shelter: temporarily govt-provided at fixed price (see markets.py TRADEOFF)
-shelter_fixed_price: 600.0
+shelter_fixed_price: 720.0  # ~30% of initial wage
 
 # Wages (monthly)
 initial_wage: 2400.0
