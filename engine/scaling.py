@@ -13,8 +13,8 @@ from .config import SimConfig
 
 REFERENCE_POPULATION = 1000
 
-# Rates (per 1000 population at reference)
-FIRMS_PER_1000 = {"food": 4, "energy": 3, "healthcare": 2}
+# One firm per good type. Firms don't compete strategically (no profit-maximizing logic);
+# prices adjust reactively to inventory. Scaling is via demand, not firm count.
 GOVT_SPENDING_PER_CAPITA = 150.0
 SAVINGS_MONTHS_OF_WAGE_AT_65 = 17.0
 BANK_RESERVES_PER_CAPITA = 500.0
@@ -24,13 +24,12 @@ NEWBORN_BOOTSTRAP_FRACTION_OF_WAGE = 0.02
 
 
 def scaled_firm_counts(config: SimConfig) -> dict[str, int]:
-    """Firm counts proportional to population. At 1000: 4 food, 3 energy, 2 healthcare."""
-    scale = config.num_individuals / REFERENCE_POPULATION
+    """One firm per good type. Demand scales with population; firm count does not."""
     return {
-        "food": max(1, round(FIRMS_PER_1000["food"] * scale)),
-        "energy": max(1, round(FIRMS_PER_1000["energy"] * scale)),
+        "food": 1,
+        "energy": 1,
         "shelter": config.num_shelter_firms,
-        "healthcare": max(1, round(FIRMS_PER_1000["healthcare"] * scale)),
+        "healthcare": 1,
     }
 
 

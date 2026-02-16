@@ -10,10 +10,10 @@ num_individuals: 1000
 owner_fraction: 0.01
 
 # Firms
-num_food_firms: 4
-num_energy_firms: 3
+num_food_firms: 1
+num_energy_firms: 1
 num_shelter_firms: 0  # govt provides shelter
-num_healthcare_firms: 2
+num_healthcare_firms: 1
 
 # Production (Cobb-Douglas) - calibrated for stable supply/demand balance
 food_productivity: 5.0

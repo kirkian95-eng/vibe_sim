@@ -49,12 +49,13 @@ def firm_target_output(
 ) -> float:
     """
     Firms target enough inventory to cover target_inventory_months of sales,
-    producing the shortfall.
+    producing the shortfall. When inventory greatly exceeds target, reduce or
+    halt production to avoid glut and deflationary spiral.
     """
     target_inventory = avg_monthly_sales * target_inventory_months
     shortfall = target_inventory - current_inventory
-    # Produce at least enough to cover expected monthly sales, plus restock
-    return max(avg_monthly_sales, avg_monthly_sales + shortfall * 0.2)
+    target = avg_monthly_sales + shortfall * 0.2
+    return max(0.0, target)
 
 
 def adjust_price(

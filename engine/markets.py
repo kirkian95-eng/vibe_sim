@@ -183,9 +183,6 @@ def clear_labor_market(
             expected_sales = max(1.0, demand / max(1, num_firms))
             avg_sales = max(1.0, firm.sales if firm.sales > 0 else expected_sales)
             target = firm_target_output(inventory, avg_sales, config.target_inventory_months)
-            # Cold start: with no sales history, target ~4 months of sales to get employment ~95%
-            if firm.sales <= 0:
-                target = max(target, expected_sales * config.target_inventory_months * 2.5)
             labor_needed = desired_labor(
                 target,
                 productivities[firm.good_type.value],

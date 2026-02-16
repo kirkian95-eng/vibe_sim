@@ -30,10 +30,10 @@ class SimConfig:
     owner_fraction: float = 0.01  # top 1% own firms
 
     # ── Firms ───────────────────────────────────────────────────────
-    num_food_firms: int = 4
-    num_energy_firms: int = 3
+    num_food_firms: int = 1  # Fixed at 1 per good; scaling overrides
+    num_energy_firms: int = 1
     num_shelter_firms: int = 0  # govt provides shelter; set 0 to avoid unused firms
-    num_healthcare_firms: int = 2
+    num_healthcare_firms: int = 1
 
     # ── Production (Cobb-Douglas) ─────────────────────────────────
     # Calibrated so full employment produces ~1.2x demand (stable prices)

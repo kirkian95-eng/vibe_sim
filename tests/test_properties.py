@@ -17,8 +17,8 @@ sim_config_strategy = st.builds(
     seed=st.integers(min_value=1, max_value=100_000),
     num_months=st.integers(min_value=3, max_value=12),
     num_individuals=st.integers(min_value=20, max_value=50),
-    num_food_firms=st.integers(min_value=1, max_value=3),
-    num_energy_firms=st.integers(min_value=1, max_value=3),
+    num_food_firms=st.just(1),  # Fixed at 1 per good
+    num_energy_firms=st.just(1),
     num_shelter_firms=st.integers(min_value=1, max_value=3),
     income_tax_rate=st.floats(min_value=0.01, max_value=0.50),
     sales_tax_rate=st.floats(min_value=0.0, max_value=0.20),

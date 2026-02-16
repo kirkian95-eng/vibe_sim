@@ -148,8 +148,8 @@ Key parameters (see `engine/config.py` or `configs/baseline.yaml`):
 |-----------|---------|-------------|
 | `num_months` | 120 | Simulation length (months) |
 | `num_individuals` | 1000 | Population size |
-| `num_food_firms` | 4 | Number of food producers |
-| `num_healthcare_firms` | 2 | Number of healthcare firms |
+| `num_food_firms` | 1 | Fixed at 1 per good; scaling overrides |
+| `num_healthcare_firms` | 1 | 1 healthcare firm; scaling overrides |
 | `income_tax_rate` | 0.20 | Income tax rate |
 | `sales_tax_rate` | 0.05 | Sales tax rate |
 | `monthly_govt_spending` | 150000 | Monthly public goods spending |

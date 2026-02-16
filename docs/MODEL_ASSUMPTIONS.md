@@ -11,7 +11,7 @@ VibeSim is a sandbox for exploring how fiscal and monetary policy
 affect a simulated economy. It models a closed economy with:
 
 - **Individuals** who are born, age, work, retire, and die
-- **Firms** that produce food, energy, shelter, and healthcare using labor and capital
+- **Firms** — one per good type (food, energy, healthcare). Shelter is govt-provided. Firms use labor and capital; they do not compete strategically — prices adjust reactively to inventory.
 - **A bank** that intermediates financial flows
 - **A government** that spends money into existence, collects taxes, pays pensions, funds healthcare, and issues bonds
 
