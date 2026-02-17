@@ -5,8 +5,12 @@ Uses hypothesis to verify that accounting invariants hold under
 random configurations and seeds. Runs a few months per test.
 """
 
-from hypothesis import HealthCheck, given, settings
-from hypothesis import strategies as st
+import pytest
+
+pytest.importorskip("hypothesis")
+
+from hypothesis import HealthCheck, given, settings  # noqa: E402
+from hypothesis import strategies as st  # noqa: E402
 
 from engine import SimConfig, Simulation
 
