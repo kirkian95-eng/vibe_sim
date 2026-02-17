@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from .config import SimConfig
 
-
 REFERENCE_POPULATION = 1000
 
 # One firm per good type. Firms don't compete strategically (no profit-maximizing logic);
@@ -80,8 +79,8 @@ def scaled_firm_endowments(
         capital_per_unit = 0.4  # K/demand ratio for Cobb-Douglas
         result[good] = {
             "cash": firm_cash,
-            "capital": max(10.0, demand_per_firm * capital_per_unit),
-            "inventory": max(5.0, demand_per_firm * config.target_inventory_months),
+            "capital": demand_per_firm * capital_per_unit,
+            "inventory": demand_per_firm * config.target_inventory_months,
         }
 
     # Healthcare firms (no inventory/capital in same way)

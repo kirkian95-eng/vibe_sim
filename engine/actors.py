@@ -126,6 +126,7 @@ class Firm(Actor):
     production: float = 0.0
     sales: float = 0.0
     revenue_ema: float = 0.0
+    cumulative_distributions: float = 0.0
 
     @property
     def is_healthcare(self) -> bool:

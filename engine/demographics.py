@@ -18,7 +18,6 @@ from .config import MONTHS_PER_YEAR, SimConfig
 from .ledger import Ledger
 from .policy import post_government_spending, post_tax_payment, post_transfer_payment
 
-
 # ---------------------------------------------------------------------------
 # Aging
 # ---------------------------------------------------------------------------
