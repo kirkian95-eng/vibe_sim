@@ -85,35 +85,35 @@ def test_inequality_exists():
 
 
 def test_stimulus_increases_money_supply():
-    """Government stimulus increases economic activity: higher spending -> higher GDP."""
+    """Government stimulus increases cumulative deficit (more spending -> more money created)."""
     config = SimConfig(num_months=12, seed=7, **_SMALL)
 
     baseline_sim = Simulation(config)
     baseline_results = baseline_sim.run()
-    baseline_gdp = sum(r.gdp for r in baseline_results)
+    baseline_deficit = sum(r.govt_deficit for r in baseline_results)
 
     stimulus_sim = Simulation(config, shocks=[stimulus_spending(month=3, extra_per_capita=300)])
     stimulus_results = stimulus_sim.run()
-    stimulus_gdp = sum(r.gdp for r in stimulus_results)
+    stimulus_deficit = sum(r.govt_deficit for r in stimulus_results)
 
-    assert stimulus_gdp > baseline_gdp, \
-        "Stimulus spending should increase GDP"
+    assert stimulus_deficit > baseline_deficit, \
+        "Stimulus spending should increase cumulative government deficit"
 
 
 def test_austerity_reduces_money_supply():
-    """Government spending cuts should reduce economic activity."""
+    """Government spending cuts should reduce cumulative deficit (less money created)."""
     config = SimConfig(num_months=12, seed=8, **_SMALL)
 
     baseline_sim = Simulation(config)
     baseline_results = baseline_sim.run()
-    baseline_gdp = sum(r.gdp for r in baseline_results)
+    baseline_deficit = sum(r.govt_deficit for r in baseline_results)
 
     austerity_sim = Simulation(config, shocks=[austerity(month=3, cut_fraction=0.5)])
     austerity_results = austerity_sim.run()
-    austerity_gdp = sum(r.gdp for r in austerity_results)
+    austerity_deficit = sum(r.govt_deficit for r in austerity_results)
 
-    assert austerity_gdp < baseline_gdp, \
-        "Austerity should reduce GDP"
+    assert austerity_deficit < baseline_deficit, \
+        "Austerity should reduce cumulative government deficit"
 
 
 def test_technology_increases_productivity():

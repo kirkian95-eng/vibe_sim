@@ -9,7 +9,7 @@ Public API::
 """
 
 from .config import SimConfig
-from .metrics import MonthlyStats, DailyStats, compute_gini
+from .metrics import DailyStats, MonthlyStats, compute_gini
 from .simulation import Simulation
 
 __version__ = "0.2.0"

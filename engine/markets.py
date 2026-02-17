@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import random as _random
 
-from .actors import Bank, Firm, GoodType, Government, Individual, LifeStage, GOODS
+from .actors import GOODS, Bank, Firm, GoodType, Government, Individual, LifeStage
 from .config import SimConfig
 from .ledger import Ledger
 from .policy import (
@@ -171,21 +171,16 @@ def clear_labor_market(
     labor_demands: list[tuple[Firm, int]] = []
     hc_firms = [f for f in firms if f.is_healthcare]
     num_hc = len(hc_firms)
-    workers_pool = len([
-        i for i in individuals
-        if i.alive and i.life_stage == LifeStage.ADULT and not i.is_owner
-    ])
-    workers_per_firm_cap = max(1, workers_pool // (len([f for f in firms if f.good_type != GoodType.SHELTER]) + 1))
 
     for firm in firms:
         if firm.good_type == GoodType.SHELTER:
             continue  # govt provides shelter; don't waste labor
         if firm.is_healthcare:
-            # Cap healthcare hiring to match demand (elder visits). Bank lends if short on deposits.
+            # Healthcare hiring scaled to retiree demand (elder visits).
             retirees = sum(1 for i in individuals if i.alive and i.life_stage == LifeStage.RETIRED)
-            workers_needed = max(1, (retirees + config.healthcare_productivity - 1) // config.healthcare_productivity)
-            per_firm = max(1, (workers_needed + num_hc - 1) // num_hc) if num_hc else 1
-            wanted = max(1, per_firm)
+            workers_needed = int((retirees + config.healthcare_productivity - 1) // config.healthcare_productivity)
+            per_firm = int((workers_needed + num_hc - 1) // num_hc) if num_hc else 0
+            wanted = per_firm
         else:
             inventory = ledger.account_balance(f"{firm.id}:inventory")
             # Demand-driven target: expected sales = consumption demand / firms producing this good
@@ -216,9 +211,9 @@ def clear_labor_market(
             )
             # Labor demand is driven by production need. Bank extends payroll loans when
             # firms are short on deposits, so cash is not a binding constraint.
-            raw_wanted = max(int(labor_needed) + 1, 1)
-            # Cap so healthcare gets headroom; ~1.2x fair share leaves workers for healthcare
-            wanted = min(raw_wanted, max(1, int(workers_per_firm_cap * 1.2)))
+            # Healthcare is prioritized first in matching (sorted below), so no
+            # per-firm cap is needed to reserve workers for healthcare.
+            wanted = max(int(labor_needed) + 1, 1)
 
         if wanted > 0:
             labor_demands.append((firm, wanted))

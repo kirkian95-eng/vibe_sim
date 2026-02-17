@@ -8,7 +8,7 @@ All flows are monthly.
 
 from __future__ import annotations
 
-from .actors import Bank, Firm, Government, GoodType, Individual, LifeStage
+from .actors import Bank, Firm, GoodType, Government, Individual, LifeStage
 from .config import SimConfig
 from .ledger import Ledger
 
@@ -473,15 +473,19 @@ def firm_profit_distribution(
             + ledger.account_balance(f"{firm.id}:input_expense")
             + ledger.account_balance(f"{firm.id}:tax_expense")
         )
-        profit = revenue - expenses
-        if profit <= 0:
+        cumulative_profit = revenue - expenses
+        # Only distribute from undistributed profit so that distributions
+        # don't grow unboundedly as cumulative revenue accumulates.
+        undistributed = cumulative_profit - firm.cumulative_distributions
+        if undistributed <= 0:
             continue
 
-        dist = profit * config.profit_distribution_rate * (1.0 / 12.0)
+        dist = undistributed * config.profit_distribution_rate
         firm_cash = ledger.account_balance(f"{firm.id}:cash")
         dist = min(dist, firm_cash * 0.5)
-        if dist > 1.0:
+        if dist > 0.01:
             post_profit_distribution(ledger, month, bank, firm, owner, dist)
+            firm.cumulative_distributions += dist
             total_distributed += dist
 
     return total_distributed

@@ -5,7 +5,7 @@ Smoke tests -- minimal sanity checks designed to run fast in CI.
 import pytest
 
 from engine import SimConfig, Simulation
-from engine.actors import create_all_actors, LifeStage
+from engine.actors import create_all_actors
 from engine.ledger import Ledger
 
 

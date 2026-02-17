@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import dataclasses as dc
 
-
 MONTHS_PER_YEAR: int = 12
 
 

@@ -13,7 +13,6 @@ from .actors import Bank, Government, Individual
 from .config import MONTHS_PER_YEAR, SimConfig
 from .ledger import Ledger
 
-
 # ── Bond purchase transaction ─────────────────────────────────────
 
 

@@ -256,10 +256,7 @@ class Ledger:
 
     def check_entries_balanced_from(self, start_idx: int) -> bool:
         """Check balance only for entries from start_idx onward (fast incremental check)."""
-        for i in range(start_idx, len(self._journal)):
-            if not self._journal[i].is_balanced():
-                return False
-        return True
+        return all(self._journal[i].is_balanced() for i in range(start_idx, len(self._journal)))
 
     def check_balance_sheet_equation(self, actor_id: str) -> bool:
         """Assets = Liabilities + Equity + Revenue - Expense.

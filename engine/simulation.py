@@ -31,15 +31,14 @@ from collections.abc import Callable
 from .actors import (
     Bank,
     Firm,
+    GoodType,
     Government,
     Individual,
-    LifeStage,
     create_all_actors,
 )
 from .bonds import clear_bond_market, pay_bond_interest
 from .config import SimConfig
 from .demographics import advance_ages, run_births, run_deaths
-from .scaling import compute_all_scaled
 from .ledger import Ledger
 from .markets import (
     adjust_prices_and_wages,
@@ -57,6 +56,7 @@ from .policy import (
     post_government_spending,
     repay_firm_loans,
 )
+from .scaling import compute_all_scaled
 from .shocks import Shock
 
 
@@ -183,6 +183,21 @@ class Simulation:
                     (f"{firm.id}:equity", 0, e["inventory"]),
                 ])
 
+        # Warm-start the sales EMA so firms estimate demand correctly from month 1.
+        # Without this, firm.sales starts at 0 and the EMA only reaches 30% of actual
+        # sales after the first month, causing firms to slash production and hiring.
+        demand_est = self._scaled.get("demand_estimates", {})
+        firm_counts = self._scaled["firm_counts"]
+        for firm in self.firms:
+            if firm.is_healthcare or firm.good_type == GoodType.SHELTER:
+                continue
+            good = firm.good_type.value
+            count = firm_counts.get(good, 1)
+            d = demand_est.get(good, 0)
+            if d > 0 and count > 0:
+                firm.sales = d / count
+                firm.revenue_ema = firm.sales * firm.price
+
     def add_profile_hook(self, hook: Callable[[str, float], None]) -> None:
         """Register a callback invoked with (phase_name, elapsed_seconds) each step."""
         self._profile_hooks.append(hook)
@@ -208,7 +223,7 @@ class Simulation:
 
         # 2. Advance ages / life-stage transitions
         t0 = time.perf_counter()
-        age_result = advance_ages(self.individuals, cfg)
+        advance_ages(self.individuals, cfg)
         self._profile("demographics_aging", time.perf_counter() - t0)
 
         # 3. Births
@@ -218,7 +233,7 @@ class Simulation:
             self.firms, self.bank, self.govt, self.rng,
             next_individual_idx=self._next_individual_idx,
         )
-        new_borns = birth_result["new_individuals"]
+        new_borns: list[Individual] = birth_result["new_individuals"]  # type: ignore[assignment]
         if new_borns:
             self.individuals.extend(new_borns)
             self._next_individual_idx += len(new_borns)
@@ -287,7 +302,7 @@ class Simulation:
         # 12. Firm loan repayment, then profit distribution
         t0 = time.perf_counter()
         repay_firm_loans(self.ledger, self.month, self.firms, self.bank)
-        total_profit_dist = firm_profit_distribution(
+        firm_profit_distribution(
             self.ledger, self.month, cfg, self.firms,
             self.individuals, self.bank,
         )
