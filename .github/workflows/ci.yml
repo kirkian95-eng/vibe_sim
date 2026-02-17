@@ -49,7 +49,7 @@ jobs:
         run: |
           python -c "
           from engine import SimConfig, Simulation
-          sim = Simulation(SimConfig(num_days=30, seed=42, num_individuals=200))
+          sim = Simulation(SimConfig(num_months=3, seed=42, num_individuals=50))
           results = sim.run()
           assert results[-1].gdp > 0
           assert sim.ledger.check_all_entries_balanced()
