@@ -31,6 +31,7 @@ from collections.abc import Callable
 from .actors import (
     Bank,
     Firm,
+    GoodType,
     Government,
     Individual,
     LifeStage,
@@ -182,6 +183,21 @@ class Simulation:
                     (f"{firm.id}:inventory", e["inventory"], 0),
                     (f"{firm.id}:equity", 0, e["inventory"]),
                 ])
+
+        # Warm-start the sales EMA so firms estimate demand correctly from month 1.
+        # Without this, firm.sales starts at 0 and the EMA only reaches 30% of actual
+        # sales after the first month, causing firms to slash production and hiring.
+        demand_est = self._scaled.get("demand_estimates", {})
+        firm_counts = self._scaled["firm_counts"]
+        for firm in self.firms:
+            if firm.is_healthcare or firm.good_type == GoodType.SHELTER:
+                continue
+            good = firm.good_type.value
+            count = firm_counts.get(good, 1)
+            d = demand_est.get(good, 0)
+            if d > 0 and count > 0:
+                firm.sales = d / count
+                firm.revenue_ema = firm.sales * firm.price
 
     def add_profile_hook(self, hook: Callable[[str, float], None]) -> None:
         """Register a callback invoked with (phase_name, elapsed_seconds) each step."""

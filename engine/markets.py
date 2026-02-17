@@ -171,11 +171,6 @@ def clear_labor_market(
     labor_demands: list[tuple[Firm, int]] = []
     hc_firms = [f for f in firms if f.is_healthcare]
     num_hc = len(hc_firms)
-    workers_pool = len([
-        i for i in individuals
-        if i.alive and i.life_stage == LifeStage.ADULT and not i.is_owner
-    ])
-    workers_per_firm_cap = max(1, workers_pool // (len([f for f in firms if f.good_type != GoodType.SHELTER]) + 1))
 
     for firm in firms:
         if firm.good_type == GoodType.SHELTER:
@@ -216,9 +211,9 @@ def clear_labor_market(
             )
             # Labor demand is driven by production need. Bank extends payroll loans when
             # firms are short on deposits, so cash is not a binding constraint.
-            raw_wanted = max(int(labor_needed) + 1, 1)
-            # Cap so healthcare gets headroom; ~1.2x fair share leaves workers for healthcare
-            wanted = min(raw_wanted, max(1, int(workers_per_firm_cap * 1.2)))
+            # Healthcare is prioritized first in matching (sorted below), so no
+            # per-firm cap is needed to reserve workers for healthcare.
+            wanted = max(int(labor_needed) + 1, 1)
 
         if wanted > 0:
             labor_demands.append((firm, wanted))

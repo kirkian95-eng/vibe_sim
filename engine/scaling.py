@@ -136,6 +136,7 @@ def compute_all_scaled(config: SimConfig) -> dict:
     return {
         "firm_counts": counts,
         "firm_endowments": endowments,
+        "demand_estimates": demand,
         "monthly_govt_spending": scaled_govt_spending(config),
         "savings_at_retirement": scaled_savings_at_retirement(config),
         "bank_reserves": scaled_bank_reserves(config),
