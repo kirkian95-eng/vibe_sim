@@ -1,5 +1,9 @@
 # VibeSim Development Rules
 
+## Do not 
+
+Do not read the entire code base when starting a session. Refer to what I have asked you to do and only read the neccesary files. 
+
 ## Testing Rules
 
 - **Max 50 agents** when running simulations for testing or debugging. Never use 200, 300, or 1000 agents unless the user specifically requests it.
