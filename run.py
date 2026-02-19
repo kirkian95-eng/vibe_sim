@@ -26,16 +26,13 @@ def run_demo():
     from engine.shocks import SCENARIOS
 
     print("=" * 70)
-    print("VibeSim v0.2 Demo — Baseline vs Stimulus Comparison")
+    print("VibeSim v0.3 Demo — Baseline vs Stimulus Comparison")
     print("=" * 70)
 
     config = SimConfig(
         num_months=24,
         seed=42,
         num_individuals=50,
-        num_food_firms=2,
-        num_energy_firms=2,
-        num_shelter_firms=0,  # govt provides shelter
     )
 
     # Baseline
