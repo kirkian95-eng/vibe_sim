@@ -8,6 +8,7 @@ Orchestrates the monthly cycle:
   4. Deaths (mortality, estate settlement)
   5. Government operations (spending + tax collection)
   6. Pension payments
+  6.5 Housing development (construction pipeline)
   7. Labor market clearing (hiring + wage payment)
   8. Production
   9. Healthcare operations (elder visits)
@@ -45,6 +46,7 @@ from .markets import (
     clear_goods_market,
     clear_labor_market,
     consume_goods,
+    run_housing_development,
     run_production,
 )
 from .metrics import MonthlyStats, collect_monthly_stats
@@ -273,6 +275,13 @@ class Simulation:
         )
         self._profile("pensions", time.perf_counter() - t0)
 
+        # 6.5 Housing development (construction pipeline)
+        t0 = time.perf_counter()
+        housing_stats = run_housing_development(
+            self.ledger, self.month, cfg, self.firms,
+        )
+        self._profile("housing_development", time.perf_counter() - t0)
+
         # 7. Labor market
         t0 = time.perf_counter()
         labor_stats = clear_labor_market(
@@ -359,6 +368,7 @@ class Simulation:
             birth_result,
             death_result,
             journal_before,
+            housing_stats,
         )
         self._profile("metrics", time.perf_counter() - t0)
 

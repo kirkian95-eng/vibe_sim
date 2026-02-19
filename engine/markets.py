@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import random as _random
 
-from .actors import GOODS, Bank, Firm, GoodType, Government, Individual, LifeStage
+from .actors import GOODS, Bank, ConstructionProject, Firm, GoodType, Government, Individual, LifeStage
 from .config import SimConfig
 from .ledger import Ledger
 from .policy import post_sales_tax
@@ -187,6 +187,90 @@ def post_production(
     ])
 
 
+# ── Housing development ────────────────────────────────────────────
+
+
+def run_housing_development(
+    ledger: Ledger,
+    month: int,
+    config: SimConfig,
+    firms: list[Firm],
+) -> dict[str, float]:
+    """
+    Monthly housing construction cycle for shelter firms.
+
+    1. Complete finished projects (add units to housing stock)
+    2. Tick active projects (pay monthly cost, decrement timer)
+    3. Start new projects if vacancy is low and firm can afford it
+
+    Returns dict with housing_starts, housing_completions.
+    """
+    shelter_firms = [f for f in firms if f.good_type == GoodType.SHELTER]
+    total_starts = 0
+    total_completions = 0
+
+    for firm in shelter_firms:
+        # --- Phase 1: Complete finished projects ---
+        remaining = []
+        for project in firm.construction_projects:
+            if project.months_remaining <= 0:
+                firm.housing_units += project.units
+                ledger.post(month, f"Construction complete: {firm.id} +{project.units} units", [
+                    (f"{firm.id}:housing_asset", project.units, 0),
+                    (f"{firm.id}:equity", 0, project.units),
+                ])
+                total_completions += project.units
+            else:
+                remaining.append(project)
+        firm.construction_projects = remaining
+
+        # --- Phase 2: Tick active projects (pay costs, decrement timer) ---
+        for project in firm.construction_projects:
+            firm_cash = ledger.account_balance(f"{firm.id}:cash")
+            if firm_cash >= project.monthly_cost:
+                ledger.post(month, f"Construction cost: {firm.id}", [
+                    (f"{firm.id}:input_expense", project.monthly_cost, 0),
+                    (f"{firm.id}:cash", 0, project.monthly_cost),
+                ])
+                project.months_remaining -= 1
+            # else: paused — insufficient funds
+
+        # --- Phase 3: Start new projects if vacancy is low ---
+        demand_proxy = max(1.0, firm.sales)
+        vacancy = firm.housing_units - demand_proxy
+        vacancy_rate = vacancy / max(1.0, firm.housing_units)
+
+        if vacancy_rate < config.housing_construction_vacancy_threshold:
+            target_vacancy = config.housing_construction_vacancy_threshold
+            target_units = demand_proxy / (1.0 - target_vacancy)
+            units_under_construction = sum(p.units for p in firm.construction_projects)
+            gap = target_units - (firm.housing_units + units_under_construction)
+            max_starts = max(1, int(firm.housing_units * config.housing_construction_max_starts_fraction))
+            starts = min(max(0, int(gap)), max_starts)
+
+            if starts > 0:
+                cost_per_unit = config.housing_construction_cost_per_unit
+                total_cost = starts * cost_per_unit
+                monthly_cost = total_cost / max(1, config.housing_construction_months)
+
+                firm_cash = ledger.account_balance(f"{firm.id}:cash")
+                if firm_cash >= monthly_cost:
+                    project = ConstructionProject(
+                        units=starts,
+                        months_remaining=config.housing_construction_months,
+                        total_cost=total_cost,
+                        monthly_cost=monthly_cost,
+                        workers_needed=config.housing_construction_workers_per_project,
+                    )
+                    firm.construction_projects.append(project)
+                    total_starts += starts
+
+    return {
+        "housing_starts": total_starts,
+        "housing_completions": total_completions,
+    }
+
+
 # ── Market clearing ─────────────────────────────────────────────────
 
 
@@ -230,10 +314,15 @@ def clear_labor_market(
             per_firm = int((workers_needed + num_hc - 1) // num_hc) if num_hc else 0
             wanted = per_firm
         elif firm.good_type == GoodType.SHELTER:
-            # Shelter firms need maintenance workers proportional to housing stock.
-            # ~1 worker per 20 housing units (property management).
+            # Shelter firms need maintenance + construction workers.
             units = firm.housing_units
-            wanted = max(1, int(units / 20) + 1)
+            maintenance = max(1, int(units / 20) + 1)
+            construction = sum(
+                p.workers_needed
+                for p in firm.construction_projects
+                if p.months_remaining > 0
+            )
+            wanted = maintenance + construction
         else:
             inventory = ledger.account_balance(f"{firm.id}:inventory")
             # Demand-driven target: expected sales = consumption demand / firms producing this good

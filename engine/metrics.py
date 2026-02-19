@@ -80,6 +80,14 @@ class MonthlyStats:
     healthcare_shortage: float = 0.0
     healthcare_govt_spending: float = 0.0
 
+    # Housing
+    housing_units: float = 0.0
+    housing_vacancy_rate: float = 0.0
+    housing_starts: int = 0
+    housing_completions: int = 0
+    housing_under_construction: int = 0
+    rent_burden: float = 0.0
+
     # Bonds
     bonds_issued: float = 0.0
     bond_rate: float = 0.0
@@ -133,6 +141,7 @@ def collect_monthly_stats(
     birth_result: dict,
     death_result: dict,
     journal_before: int,
+    housing_stats: dict[str, float] | None = None,
 ) -> MonthlyStats:
     """Gather all statistics for the current month."""
     alive = [ind for ind in individuals if ind.alive]
@@ -211,6 +220,19 @@ def collect_monthly_stats(
     population = len(alive)
     dependency_ratio = (num_children + num_retirees) / max(1, num_adults)
 
+    # Housing
+    if housing_stats is None:
+        housing_stats = {}
+    shelter_firms = [f for f in firms if f.good_type == GoodType.SHELTER]
+    total_housing = sum(f.housing_units for f in shelter_firms)
+    total_shelter_demand = sum(max(1.0, f.sales) for f in shelter_firms) if shelter_firms else 0.0
+    housing_vacancy = max(0.0, (total_housing - total_shelter_demand) / max(1.0, total_housing))
+    under_construction = sum(
+        sum(p.units for p in f.construction_projects if p.months_remaining > 0)
+        for f in shelter_firms
+    )
+    rent_burden = (goods_stats.get("shelter_avg_price", 0.0) / avg_wage) if avg_wage > 0 else 0.0
+
     # Bonds outstanding
     total_bonds = ledger.account_balance(f"{govt_id}:bonds_issued")
 
@@ -261,6 +283,12 @@ def collect_monthly_stats(
         elder_visits_served=hc_stats.get("elder_visits_served", 0.0),
         healthcare_shortage=hc_stats.get("healthcare_shortage", 0.0),
         healthcare_govt_spending=hc_stats.get("healthcare_govt_spending", 0.0),
+        housing_units=total_housing,
+        housing_vacancy_rate=housing_vacancy,
+        housing_starts=int(housing_stats.get("housing_starts", 0)),
+        housing_completions=int(housing_stats.get("housing_completions", 0)),
+        housing_under_construction=int(under_construction),
+        rent_burden=rent_burden,
         bonds_issued=bond_stats.get("bonds_issued", 0.0),
         bond_rate=bond_stats.get("bond_rate", 0.0),
         total_bonds_outstanding=total_bonds,

@@ -46,6 +46,13 @@ initial_shelter_price: 720.0  # monthly rent
 initial_housing_stock_per_capita: 1.2
 shelter_rent_price: 720.0
 
+# Housing construction
+housing_construction_months: 6
+housing_construction_cost_per_unit: 8640.0
+housing_construction_workers_per_project: 2
+housing_construction_vacancy_threshold: 0.10
+housing_construction_max_starts_fraction: 0.05
+
 # Wages (monthly)
 initial_wage: 2400.0
 min_wage: 600.0

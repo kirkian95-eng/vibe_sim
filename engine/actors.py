@@ -115,6 +115,17 @@ class Individual(Actor):
 
 
 @dc.dataclass
+class ConstructionProject:
+    """A housing construction project in progress."""
+
+    units: int
+    months_remaining: int
+    total_cost: float
+    monthly_cost: float
+    workers_needed: int
+
+
+@dc.dataclass
 class Firm(Actor):
     """A firm that produces one type of good."""
 
@@ -128,6 +139,7 @@ class Firm(Actor):
     revenue_ema: float = 0.0
     cumulative_distributions: float = 0.0
     housing_units: float = 0.0  # durable housing stock (shelter firms only)
+    construction_projects: list[ConstructionProject] = dc.field(default_factory=list)
 
     @property
     def is_healthcare(self) -> bool:

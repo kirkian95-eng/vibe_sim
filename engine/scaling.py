@@ -89,8 +89,15 @@ def scaled_firm_endowments(
     if shelter_count > 0:
         total_housing = n * config.initial_housing_stock_per_capita
         housing_per_firm = total_housing / shelter_count
+        # Extra cash buffer for construction costs (~3 months of a small project)
+        construction_buffer = (
+            housing_per_firm * config.housing_construction_max_starts_fraction
+            * config.housing_construction_cost_per_unit
+            / max(1, config.housing_construction_months)
+            * 3
+        )
         result["shelter"] = {
-            "cash": firm_cash,
+            "cash": firm_cash + construction_buffer,
             "capital": 0.0,
             "inventory": 0.0,
             "housing_units": housing_per_firm,

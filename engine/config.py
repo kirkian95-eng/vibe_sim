@@ -61,6 +61,13 @@ class SimConfig:
     initial_housing_stock_per_capita: float = 1.2  # housing units per person (>1 = vacancy)
     shelter_rent_price: float = 720.0  # initial monthly rent per unit
 
+    # ── Housing construction ─────────────────────────────────────────
+    housing_construction_months: int = 6  # months to build one project
+    housing_construction_cost_per_unit: float = 8640.0  # total cash cost per unit (~12x rent)
+    housing_construction_workers_per_project: int = 2  # workers per active project
+    housing_construction_vacancy_threshold: float = 0.10  # build when vacancy < 10%
+    housing_construction_max_starts_fraction: float = 0.05  # max new starts as fraction of stock
+
     # ── Prices (initial, per unit) ──────────────────────────────────
     # Start near equilibrium (~cost-based) to avoid price spikes/collapses
     initial_food_price: float = 25.0
