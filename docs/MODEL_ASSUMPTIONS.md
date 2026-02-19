@@ -11,7 +11,7 @@ VibeSim is a sandbox for exploring how fiscal and monetary policy
 affect a simulated economy. It models a closed economy with:
 
 - **Individuals** who are born, age, work, retire, and die
-- **Firms** — one per good type (food, energy, healthcare). Shelter is govt-provided. Firms use labor and capital; they do not compete strategically — prices adjust reactively to inventory.
+- **Firms** — one per good type (food, energy, healthcare) plus landlord firms (shelter). Firms use labor and capital; they do not compete strategically — prices adjust reactively to inventory/vacancy.
 - **A bank** that intermediates financial flows and extends loans to firms (and individuals) short on deposits
 - **A government** that spends money into existence, collects taxes, pays pensions, funds healthcare, and issues bonds
 
@@ -202,13 +202,19 @@ resets monthly (no contracts).
 
 1. Individuals shuffled for fairness
 2. Goods purchased in priority: food > energy > shelter
-3. Buy from cheapest firm with stock
-4. Quantity = min(need, available inventory, affordable)
+3. Buy from cheapest firm with stock (food/energy) or lowest rent (shelter)
+4. Quantity = min(need, available inventory or housing capacity, affordable)
 5. Sales tax collected per transaction
-6. Guardians purchase food for their children (at 50% of adult quantity)
+6. Guardians pay for their children's food (at 50% of adult quantity) and shelter
+
+**Shelter (Rental Market)**: Shelter firms own durable housing stock. Individuals
+pay monthly rent; housing units stay with the firm (not consumed). Rent prices
+adjust based on vacancy rate rather than inventory. Shelter firms hire
+maintenance workers proportional to housing stock.
 
 **Limitations**: Fixed monthly needs (no demand elasticity), no consumer
-credit for purchases, no saving/investment optimization.
+credit for purchases, no saving/investment optimization. No home ownership
+or mortgages yet.
 
 ---
 
@@ -234,17 +240,24 @@ credit for purchases, no saving/investment optimization.
 
 ---
 
-## 10. Planned Extensions
+## 10. Planned Extensions (v0.3 in progress)
 
-- Capital investment with an accelerator mechanism
-- Depreciation requiring reinvestment
-- Interest rate policy (policy rate targeting)
+- Housing development — shelter firms build new units with labor and capital
+- Firm equity — shareholders, stock market, profit distribution overhaul
+- Firm insolvency — liquidation, restructuring, bailouts
+- Manager job type — credential-gated, 1:5 ratio to workers
+- College — institution that produces credentials, govt-funded
+- Childcare and schools — affects parental labor supply
+
+### Future (v0.4+)
+
+- Fiscal and monetary policy stabilizers
+- Central bank with dual mandate
 - Open economy with trade and exchange rates
 - Heterogeneous agents (skills, preferences)
 - Demand elasticity (luxury consumption, savings)
 - Immigration and emigration
-- Education and human capital accumulation
 
 ---
 
-*Document version: 0.2.0 — February 2026*
+*Document version: 0.3.0-dev — February 2026*

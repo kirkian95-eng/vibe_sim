@@ -127,6 +127,7 @@ class Firm(Actor):
     sales: float = 0.0
     revenue_ema: float = 0.0
     cumulative_distributions: float = 0.0
+    housing_units: float = 0.0  # durable housing stock (shelter firms only)
 
     @property
     def is_healthcare(self) -> bool:
@@ -153,6 +154,8 @@ class Firm(Actor):
         ledger.create_account(actor_id, "cash", AccountType.ASSET)
         ledger.create_account(actor_id, "inventory", AccountType.ASSET)
         ledger.create_account(actor_id, "capital", AccountType.ASSET)
+        if good_type == GoodType.SHELTER:
+            ledger.create_account(actor_id, "housing_asset", AccountType.ASSET)
         ledger.create_account(actor_id, "loans_payable", AccountType.LIABILITY)
         ledger.create_account(actor_id, "equity", AccountType.EQUITY)
         # Income-statement accounts
@@ -198,7 +201,7 @@ class Government(Actor):
     def create(ledger: Ledger) -> Government:
         actor_id = "govt"
         govt = Government(id=actor_id, actor_type=ActorType.GOVERNMENT)
-        # Assets (treasury balance for shelter revenue etc; does not destroy money)
+        # Assets
         ledger.create_account(actor_id, "cash", AccountType.ASSET)
         ledger.create_account(actor_id, "tax_receivable", AccountType.ASSET)
         # Liabilities (money is a govt liability)
@@ -208,7 +211,6 @@ class Government(Actor):
         ledger.create_account(actor_id, "equity", AccountType.EQUITY)
         # Income statement
         ledger.create_account(actor_id, "tax_revenue", AccountType.REVENUE)
-        ledger.create_account(actor_id, "shelter_revenue", AccountType.REVENUE)
         ledger.create_account(actor_id, "spending_expense", AccountType.EXPENSE)
         ledger.create_account(actor_id, "transfer_expense", AccountType.EXPENSE)
         ledger.create_account(actor_id, "interest_expense", AccountType.EXPENSE)

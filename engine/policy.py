@@ -15,33 +15,6 @@ from .ledger import Ledger
 # ── Transaction helpers ─────────────────────────────────────────────
 
 
-def post_government_spending_from_treasury(
-    ledger: Ledger,
-    month: int,
-    govt: Government,
-    recipient_id: str,
-    amount: float,
-    description: str,
-) -> None:
-    """
-    Government spends from its cash (shelter revenue) — no money creation.
-    Recycled shelter payments reduce need for new currency issuance.
-    """
-    if recipient_id.startswith("ind_"):
-        income_acct = f"{recipient_id}:transfer_income"
-    elif recipient_id.startswith("firm_"):
-        income_acct = f"{recipient_id}:revenue"
-    else:
-        income_acct = f"{recipient_id}:equity"
-
-    ledger.post(month, description, [
-        (f"{govt.id}:spending_expense", amount, 0),
-        (f"{govt.id}:cash", 0, amount),
-        (f"{recipient_id}:cash", amount, 0),
-        (income_acct, 0, amount),
-    ])
-
-
 def post_government_spending(
     ledger: Ledger,
     month: int,
@@ -190,56 +163,6 @@ def post_sales_tax(
     post_tax_payment(ledger, month, govt, bank, firm.id, amount, f"Sales tax: {firm.id}")
 
 
-def post_shelter_purchase_from_govt(
-    ledger: Ledger,
-    month: int,
-    ind: Individual,
-    bank: Bank,
-    govt: Government,
-    quantity: float,
-    price_per_unit: float,
-) -> None:
-    """
-    Individual buys shelter from government (infinite supply, fixed price).
-
-    Shelter payments destroy money (like taxes), routing through the bank's
-    deposits/reserves.  The government creates fresh money through its spending
-    channels (transfers, pensions, govt spending).  This prevents the government
-    from hoarding shelter revenue indefinitely, which would drain money from
-    the private economy and cause deflation.
-    """
-    total = quantity * price_per_unit
-    if total <= 0 or quantity <= 0:
-        return
-
-    diff = total - quantity
-    if diff >= 0:
-        buyer_lines = [
-            (f"{ind.id}:inventory:shelter", quantity, 0),
-            (f"{ind.id}:cash", 0, total),
-            (f"{ind.id}:equity", diff, 0),
-            (f"{bank.id}:deposits", total, 0),
-            (f"{bank.id}:reserves", 0, total),
-            (f"{govt.id}:currency_issued", total, 0),
-            (f"{govt.id}:shelter_revenue", 0, total),
-        ]
-    else:
-        buyer_lines = [
-            (f"{ind.id}:inventory:shelter", quantity, 0),
-            (f"{ind.id}:cash", 0, total),
-            (f"{ind.id}:equity", 0, -diff),
-            (f"{bank.id}:deposits", total, 0),
-            (f"{bank.id}:reserves", 0, total),
-            (f"{govt.id}:currency_issued", total, 0),
-            (f"{govt.id}:shelter_revenue", 0, total),
-        ]
-    ledger.post(
-        month,
-        f"Shelter (govt): {ind.id} buys {quantity:.1f} @ {price_per_unit:.0f}",
-        buyer_lines,
-    )
-
-
 def post_profit_distribution(
     ledger: Ledger,
     month: int,
@@ -313,25 +236,14 @@ def government_operations(
         transfers_to_households += amount
 
     # General government spending (purchases from non-healthcare firms)
-    # Use treasury first to recycle money; create new money if needed
-    non_hc_firms = [f for f in firms if not f.is_healthcare and f.good_type != GoodType.SHELTER]
+    non_hc_firms = [f for f in firms if not f.is_healthcare]
     if config.monthly_govt_spending > 0 and non_hc_firms:
         per_firm = config.monthly_govt_spending / len(non_hc_firms)
-        govt_cash = ledger.account_balance(f"{govt.id}:cash")
         for firm in non_hc_firms:
-            use_treasury = min(per_firm, govt_cash)
-            if use_treasury > 0.01:
-                post_government_spending_from_treasury(
-                    ledger, month, govt, firm.id, use_treasury,
-                    f"Govt spending (treasury): {firm.id}",
-                )
-                govt_cash -= use_treasury
-            need_create = per_firm - use_treasury
-            if need_create > 0.01:
-                post_government_spending(
-                    ledger, month, govt, bank, firm.id, need_create,
-                    f"Govt spending: {firm.id}",
-                )
+            post_government_spending(
+                ledger, month, govt, bank, firm.id, per_firm,
+                f"Govt spending: {firm.id}",
+            )
             total_transfers += per_firm
             govt_spending_on_firms += per_firm
 

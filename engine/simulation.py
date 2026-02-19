@@ -182,6 +182,15 @@ class Simulation:
                     (f"{firm.id}:inventory", e["inventory"], 0),
                     (f"{firm.id}:equity", 0, e["inventory"]),
                 ])
+            # Initial housing stock - shelter firms only
+            if firm.good_type == GoodType.SHELTER:
+                housing = e.get("housing_units", 0.0)
+                if housing > 0:
+                    firm.housing_units = housing
+                    self.ledger.post(0, f"Bootstrap: housing for {firm.id}", [
+                        (f"{firm.id}:housing_asset", housing, 0),
+                        (f"{firm.id}:equity", 0, housing),
+                    ])
 
         # Warm-start the sales EMA so firms estimate demand correctly from month 1.
         # Without this, firm.sales starts at 0 and the EMA only reaches 30% of actual
@@ -189,7 +198,7 @@ class Simulation:
         demand_est = self._scaled.get("demand_estimates", {})
         firm_counts = self._scaled["firm_counts"]
         for firm in self.firms:
-            if firm.is_healthcare or firm.good_type == GoodType.SHELTER:
+            if firm.is_healthcare:
                 continue
             good = firm.good_type.value
             count = firm_counts.get(good, 1)

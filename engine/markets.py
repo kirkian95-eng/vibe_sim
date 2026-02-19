@@ -12,10 +12,7 @@ import random as _random
 from .actors import GOODS, Bank, Firm, GoodType, Government, Individual, LifeStage
 from .config import SimConfig
 from .ledger import Ledger
-from .policy import (
-    post_sales_tax,
-    post_shelter_purchase_from_govt,
-)
+from .policy import post_sales_tax
 from .production import cobb_douglas, desired_labor, firm_target_output
 
 # ── Transaction helpers ─────────────────────────────────────────────
@@ -108,6 +105,59 @@ def post_goods_sale(
     ])
 
 
+def post_rent_payment(
+    ledger: Ledger,
+    month: int,
+    bank: Bank,
+    firm: Firm,
+    payer: Individual,
+    tenant: Individual,
+    quantity: float,
+    price_per_unit: float,
+) -> None:
+    """
+    Rent payment: tenant pays landlord firm for housing.
+    Housing units stay with the firm (durable asset). No inventory transfer.
+    If payer != tenant (guardian paying for child), the guardian transfer is
+    handled first, then the tenant pays the firm.
+    """
+    total = quantity * price_per_unit
+    if total <= 0:
+        return
+
+    # If guardian is paying for a child, transfer money first
+    if payer.id != tenant.id:
+        ledger.post(month, f"Guardian rent transfer: {payer.id} -> {tenant.id}", [
+            (f"{payer.id}:cash", 0, total),
+            (f"{payer.id}:equity", total, 0),
+            (f"{tenant.id}:cash", total, 0),
+            (f"{tenant.id}:transfer_income", 0, total),
+        ])
+
+    # Tenant pays rent to firm. Shelter inventory goes to tenant for consumption
+    # tracking, but housing_asset stays with firm (durable). Same pattern as goods sale.
+    diff = total - quantity
+    if diff >= 0:
+        tenant_lines = [
+            (f"{tenant.id}:inventory:shelter", quantity, 0),
+            (f"{tenant.id}:cash", 0, total),
+            (f"{tenant.id}:equity", diff, 0),
+        ]
+    else:
+        tenant_lines = [
+            (f"{tenant.id}:inventory:shelter", quantity, 0),
+            (f"{tenant.id}:cash", 0, total),
+            (f"{tenant.id}:equity", 0, -diff),
+        ]
+    ledger.post(month, f"Rent: {tenant.id} pays {firm.id} {quantity:.1f} shelter", tenant_lines)
+
+    # Firm receives rent revenue (no inventory deduction — housing is durable)
+    ledger.post(month, f"Rent revenue: {firm.id} from {tenant.id}", [
+        (f"{firm.id}:cash", total, 0),
+        (f"{firm.id}:revenue", 0, total),
+    ])
+
+
 def post_goods_consumption(
     ledger: Ledger,
     month: int,
@@ -173,14 +223,17 @@ def clear_labor_market(
     num_hc = len(hc_firms)
 
     for firm in firms:
-        if firm.good_type == GoodType.SHELTER:
-            continue  # govt provides shelter; don't waste labor
         if firm.is_healthcare:
             # Healthcare hiring scaled to retiree demand (elder visits).
             retirees = sum(1 for i in individuals if i.alive and i.life_stage == LifeStage.RETIRED)
             workers_needed = int((retirees + config.healthcare_productivity - 1) // config.healthcare_productivity)
             per_firm = int((workers_needed + num_hc - 1) // num_hc) if num_hc else 0
             wanted = per_firm
+        elif firm.good_type == GoodType.SHELTER:
+            # Shelter firms need maintenance workers proportional to housing stock.
+            # ~1 worker per 20 housing units (property management).
+            units = firm.housing_units
+            wanted = max(1, int(units / 20) + 1)
         else:
             inventory = ledger.account_balance(f"{firm.id}:inventory")
             # Demand-driven target: expected sales = consumption demand / firms producing this good
@@ -209,10 +262,6 @@ def clear_labor_market(
                 config.labor_share,
                 config.capital_share,
             )
-            # Labor demand is driven by production need. Bank extends payroll loans when
-            # firms are short on deposits, so cash is not a binding constraint.
-            # Healthcare is prioritized first in matching (sorted below), so no
-            # per-firm cap is needed to reserve workers for healthcare.
             wanted = max(int(labor_needed) + 1, 1)
 
         if wanted > 0:
@@ -227,19 +276,28 @@ def clear_labor_market(
     ]
     rng.shuffle(workers)
 
-    # Sort firms: healthcare first (priority for elder care), then by wage (higher attracts first)
-    def _labor_sort_key(item: tuple) -> tuple:
-        f = item[0]
-        return (0 if f.is_healthcare else 1, -f.wage_offer)
-
-    labor_demands.sort(key=_labor_sort_key)
+    # Hiring order:
+    #   1. Healthcare (priority — elder care demand)
+    #   2. Shelter maintenance (small, fixed)
+    #   3. Goods firms (food, energy) — proportional to demand so no sector is starved
+    priority_demands = []
+    goods_demands = []
+    for f, d in labor_demands:
+        if f.is_healthcare or f.good_type == GoodType.SHELTER:
+            priority_demands.append((f, d))
+        else:
+            goods_demands.append((f, d))
+    # Healthcare first, then shelter, sorted by wage within each group
+    priority_demands.sort(key=lambda x: (0 if x[0].is_healthcare else 1, -x[0].wage_offer))
 
     worker_idx = 0
     total_hired = 0
     total_wages = 0.0
-    for firm, demand in labor_demands:
+
+    def _hire_workers(firm: Firm, target: int) -> None:
+        nonlocal worker_idx, total_hired, total_wages
         hired = 0
-        while hired < demand and worker_idx < len(workers):
+        while hired < target and worker_idx < len(workers):
             w = workers[worker_idx]
             worker_idx += 1
             w.employed = True
@@ -255,6 +313,28 @@ def clear_labor_market(
 
             total_wages += effective_wage
             post_wage_payment(ledger, month, bank, firm, w, effective_wage)
+
+    # Phase 1: Priority hiring (healthcare, shelter)
+    for firm, demand in priority_demands:
+        _hire_workers(firm, demand)
+
+    # Phase 2: Goods firms get proportional share of remaining workers
+    available = len(workers) - worker_idx
+    total_goods_demand = sum(d for _, d in goods_demands)
+    if total_goods_demand > 0 and available > 0:
+        # Sort by wage for consistent ordering
+        goods_demands.sort(key=lambda x: -x[0].wage_offer)
+        allocated_so_far = 0
+        for i, (firm, demand) in enumerate(goods_demands):
+            if total_goods_demand <= available:
+                alloc = demand
+            elif i == len(goods_demands) - 1:
+                alloc = available - allocated_so_far
+            else:
+                alloc = max(1, round(demand * available / total_goods_demand))
+                alloc = min(alloc, available - allocated_so_far)
+            _hire_workers(firm, alloc)
+            allocated_so_far += alloc
 
     total_workers = len(workers)
     unemployment_rate = 1.0 - (total_hired / max(total_workers, 1))
@@ -281,7 +361,7 @@ def run_production(
             continue
         if firm.good_type == GoodType.SHELTER:
             firm.production = 0.0
-            continue  # govt provides shelter; don't produce
+            continue  # housing is a durable asset; no monthly production
         capital = ledger.account_balance(f"{firm.id}:capital")
         labor = float(firm.num_workers)
         output = cobb_douglas(
@@ -309,6 +389,8 @@ def clear_goods_market(
     """
     Individuals buy goods from firms.  Priority: food > energy > shelter.
     Children's food consumption (paid by guardians) is handled here.
+    Shelter is a rental market: individuals pay rent to shelter firms, but
+    housing units stay with the firm (durable asset, not consumed).
     Returns stats with prices and quantities.
     """
     needs = config.consumption_needs()
@@ -334,77 +416,93 @@ def clear_goods_market(
     # Build parent lookup for child food purchasing
     ind_by_id = {i.id: i for i in individuals}
 
-    # Determine consumption needs per individual
-    # Children: 0.5x food, 1.0x energy, 1.0x shelter (paid by guardian)
-    # Retirees and adults: full consumption
     alive_individuals = [i for i in individuals if i.alive]
 
     # Shuffle for fairness
     order = list(alive_individuals)
     rng.shuffle(order)
 
-    # TRADEOFF: Shelter is temporarily an infinitely-available good at fixed price.
-    # Individuals buy from government; money is destroyed like tax. To revert to
-    # market-based shelter with supply-constrained firms, restore the shelter firm
-    # loop below and remove the shelter govt branch. See policy.post_shelter_purchase_from_govt.
-    shelter_fixed_price = config.shelter_fixed_price
-
     for good_type in [GoodType.FOOD, GoodType.ENERGY, GoodType.SHELTER]:
         need_base = needs[good_type.value]
         available_firms = firms_by_good[good_type]
 
-        # Shelter: bypass firms, use govt provision (infinite supply, fixed price)
-        if good_type == GoodType.SHELTER:
-            for ind in order:
-                need = need_base if ind.life_stage != LifeStage.CHILD else need_base
-                payer = None
-                for pid in ind.parent_ids:
-                    p = ind_by_id.get(pid)
-                    if p and p.alive:
-                        payer = p
-                        break
-                if ind.life_stage != LifeStage.CHILD:
-                    payer = ind
-                if payer is None:
-                    continue
-                payer_cash_acct = f"{payer.id}:cash"
-                cash = ledger.account_balance(payer_cash_acct)
-                if cash <= 0:
-                    continue
-                qty = min(need, cash / shelter_fixed_price)
-                if qty <= 0.001:
-                    continue
-                cost = qty * shelter_fixed_price
-                # Guardian pays for child: transfer from guardian to child (balance sheet neutral)
-                if payer.id != ind.id and cost > 0:
-                    ledger.post(month, f"Guardian shelter transfer: {payer.id} -> {ind.id}", [
-                        (f"{payer.id}:cash", 0, cost),
-                        (f"{payer.id}:equity", cost, 0),
-                        (f"{ind.id}:cash", cost, 0),
-                        (f"{ind.id}:transfer_income", 0, cost),
-                    ])
-                post_shelter_purchase_from_govt(
-                    ledger, month, ind, bank, govt, qty, shelter_fixed_price
-                )
-                total_sales[good_type.value] += qty
-                total_revenue[good_type.value] += cost
-                if ind.is_owner:
-                    capitalist_consumption += cost
-                else:
-                    worker_consumption += cost
-            continue
-
         if not available_firms:
             continue
 
+        # Shelter: rental market — capacity is housing_units, not inventory
+        if good_type == GoodType.SHELTER:
+            # Track how many units have been rented this month per firm
+            units_rented: dict[str, float] = {f.id: 0.0 for f in available_firms}
+            for ind in order:
+                need = need_base
+                # Determine payer (guardian for children)
+                if ind.life_stage == LifeStage.CHILD:
+                    payer = None
+                    for pid in ind.parent_ids:
+                        p = ind_by_id.get(pid)
+                        if p and p.alive:
+                            payer = p
+                            break
+                    if payer is None:
+                        continue
+                else:
+                    payer = ind
+
+                cash = ledger.account_balance(f"{payer.id}:cash")
+                if cash <= 0:
+                    continue
+
+                available_firms.sort(key=lambda f: f.price)
+                remaining_need = need
+
+                for firm in available_firms:
+                    if remaining_need <= 0:
+                        break
+                    capacity = firm.housing_units - units_rented[firm.id]
+                    if capacity <= 0:
+                        continue
+
+                    qty = min(remaining_need, capacity)
+                    cost = qty * firm.price
+                    if cost > cash:
+                        qty = cash / firm.price
+                        cost = qty * firm.price
+                    if qty <= 0.001:
+                        continue
+
+                    # Rent payment: money flows, but no inventory transfer.
+                    # Payer pays, firm receives revenue. Shelter inventory stays.
+                    post_rent_payment(ledger, month, bank, firm, payer, ind, qty, firm.price)
+
+                    # Sales tax on rent
+                    tax = cost * config.sales_tax_rate
+                    if tax > 0.01:
+                        firm_cash = ledger.account_balance(f"{firm.id}:cash")
+                        tax = min(tax, firm_cash)
+                        if tax > 0.01:
+                            post_sales_tax(ledger, month, govt, bank, firm, tax)
+                            total_sales_tax += tax
+
+                    units_rented[firm.id] += qty
+                    remaining_need -= qty
+                    cash -= cost
+                    total_sales[good_type.value] += qty
+                    total_revenue[good_type.value] += cost
+                    firm_month_sales[firm.id] = firm_month_sales.get(firm.id, 0.0) + qty
+                    firm_month_revenue[firm.id] = firm_month_revenue.get(firm.id, 0.0) + cost
+                    if ind.is_owner:
+                        capitalist_consumption += cost
+                    else:
+                        worker_consumption += cost
+            continue
+
+        # Food and energy: standard goods market with inventory
         for ind in order:
-            # Determine this individual's need and who pays
             if ind.life_stage == LifeStage.CHILD:
                 if good_type == GoodType.FOOD:
                     need = need_base * config.child_food_fraction
                 else:
                     need = need_base
-                # Guardian pays — find first living parent
                 payer = None
                 for pid in ind.parent_ids:
                     p = ind_by_id.get(pid)
@@ -412,7 +510,7 @@ def clear_goods_market(
                         payer = p
                         break
                 if payer is None:
-                    continue  # orphan with no guardian — skip
+                    continue
                 payer_cash_acct = f"{payer.id}:cash"
             else:
                 need = need_base
@@ -442,9 +540,6 @@ def clear_goods_market(
                     continue
 
                 post_goods_sale(ledger, month, bank, firm, ind, good_type, qty, firm.price)
-
-                if ind.life_stage == LifeStage.CHILD and payer is not None and payer.id != ind.id:
-                    pass  # We'll handle this below
 
                 # Sales tax
                 tax = cost * config.sales_tax_rate
@@ -476,15 +571,11 @@ def clear_goods_market(
     for g in GOODS:
         stats[f"{g.value}_quantity_sold"] = total_sales[g.value]
         stats[f"{g.value}_revenue"] = total_revenue[g.value]
-        if g == GoodType.SHELTER:
-            # Shelter is govt-provided at fixed price (see TRADEOFF above)
-            stats[f"{g.value}_avg_price"] = shelter_fixed_price
+        gfirms = firms_by_good.get(g, [])
+        if gfirms:
+            stats[f"{g.value}_avg_price"] = sum(f.price for f in gfirms) / len(gfirms)
         else:
-            gfirms = firms_by_good.get(g, [])
-            if gfirms:
-                stats[f"{g.value}_avg_price"] = sum(f.price for f in gfirms) / len(gfirms)
-            else:
-                stats[f"{g.value}_avg_price"] = 0.0
+            stats[f"{g.value}_avg_price"] = 0.0
 
     stats["worker_consumption"] = worker_consumption
     stats["capitalist_consumption"] = capitalist_consumption
@@ -526,7 +617,25 @@ def adjust_prices_and_wages(
 
     for firm in firms:
         if firm.is_healthcare:
-            # Healthcare firms adjust wages but don't have inventory-based pricing
+            firm.wage_offer = adjust_wage(
+                firm.wage_offer,
+                unemployment_rate,
+                config.wage_adjustment_speed,
+                min_wage=config.min_wage,
+            )
+            continue
+
+        if firm.good_type == GoodType.SHELTER:
+            # Shelter firms adjust rent based on vacancy rate.
+            # High vacancy (units > demand) → lower rent. Low vacancy → raise rent.
+            # Use sales EMA as proxy for demand; housing_units as supply.
+            demand_proxy = max(1.0, firm.sales)
+            vacancy = firm.housing_units - demand_proxy
+            vacancy_rate = vacancy / max(1.0, firm.housing_units)
+            # If vacancy > 0, excess supply → lower price. If < 0, shortage → raise.
+            adj = -vacancy_rate * config.price_adjustment_speed
+            adj = max(-config.price_adjustment_speed, min(adj, config.price_adjustment_speed))
+            firm.price = max(10.0, firm.price * (1.0 + adj))
             firm.wage_offer = adjust_wage(
                 firm.wage_offer,
                 unemployment_rate,

@@ -12,7 +12,7 @@ Think of it as SimCity for macroeconomics — tune the knobs, watch the dials, a
 
 ## Features
 
-- **Multi-Agent Economy**: Workers, firms (food/energy/shelter/healthcare), a bank, and a consolidated government
+- **Multi-Agent Economy**: Workers, firms (food/energy/healthcare), landlord firms (shelter/housing), a bank, and a consolidated government
 - **Demographics**: Individual lifecycle — children, working-age adults, retirees. Births, deaths, aging, and life-stage transitions
 - **Policy Levers**: Tax rates, government spending, transfers, minimum wage, pension replacement rate, retirement age
 - **Government Bonds**: Monthly bond market with interest rate clearing and coupon payments
@@ -98,7 +98,7 @@ Each simulated month follows this cycle:
 6. **Labor market** — firms hire workers and pay wages (healthcare firms included)
 7. **Production** — firms produce goods using labor + capital
 8. **Healthcare** — government pays for elder visits; capacity tracking
-9. **Goods market** — individuals buy food, energy, shelter (guardians pay for children)
+9. **Goods market** — individuals buy food, energy; rent shelter from landlord firms (guardians pay for children)
 10. **Consumption** — individuals use what they bought
 11. **Profit distribution** — firms pay owners (monthly)
 12. **Bond market** — government issues bonds to cover deficit; bisection clearing
@@ -223,15 +223,21 @@ tests/               # Test suite (48 tests)
 configs/             # YAML config presets
 ```
 
+## Current Development (v0.3)
+
+v0.3 is in progress — see `plan.md` and `plans.md` for details. Completed so far:
+- **Housing rental market** — shelter firms own housing stock and collect rent (replaces the v0.22 shelter nerf)
+
+Still to come in v0.3: housing development, firm equity/insolvency, managers, college, childcare.
+
 ## Future Directions
 
-- Bank lending / endogenous credit creation
+- Fiscal and monetary policy stabilizers (v0.4)
+- Trade with a second country (v0.5)
 - Capital investment and depreciation
 - Open economy (trade, exchange rates)
 - Heterogeneous agents (skills, preferences)
-- Asset markets (stocks, real estate)
 - Immigration and emigration
-- Education and human capital accumulation
 
 ## Contributing
 

@@ -3,6 +3,45 @@
 All notable changes to VibeSim are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.3.0] - Unreleased — Shelters and Firms Overhaul
+
+### Added
+- **Housing rental market**: Shelter firms are now landlords that own
+  durable housing stock (`housing_units`) and collect monthly rent from
+  individuals. Housing units are a durable asset — they stay with the firm
+  and are not consumed like food or energy.
+- **New config parameters**: `initial_housing_stock_per_capita` (default 1.2),
+  `shelter_rent_price` (default 720).
+- **New ledger account**: `housing_asset` on shelter firms tracks the value of
+  their housing stock.
+- **Rent price adjustment**: Shelter firms adjust rent based on vacancy rate
+  (high vacancy lowers rent, low vacancy raises it), rather than the
+  inventory-based mechanism used by goods firms.
+- **New transaction type**: `post_rent_payment()` in `markets.py` handles
+  rental payments with proper guardian-pays-for-child support.
+
+### Changed
+- **Shelter firms active**: `num_shelter_firms` default changed from 0 to 1.
+  Shelter firms now participate in the labor market (hiring maintenance workers)
+  and the goods market (collecting rent).
+- **Government spending**: Now distributed to all non-healthcare firms including
+  shelter firms. Removed treasury recycling mechanism that was specific to the
+  shelter nerf.
+
+### Removed
+- **Shelter nerf (v0.22)**: Removed `post_shelter_purchase_from_govt()`,
+  `post_government_spending_from_treasury()`, and `shelter_revenue` account
+  from Government. All shelter rents now flow to private firms, not government.
+- **`shelter_fixed_price` config**: Replaced by market-determined rent prices.
+
+### Migration notes
+- Shelter price series from v0.22 are NOT comparable to v0.3 — v0.22 used a
+  fixed government-set price, while v0.3 uses market-clearing rent prices.
+- The `shelter_fixed_price` config parameter no longer exists. Use
+  `initial_shelter_price` and `shelter_rent_price` instead.
+- Government revenue no longer includes shelter income. This may change
+  fiscal balance comparisons between v0.22 and v0.3 runs.
+
 ## [0.2.0] - 2026-02-16 — Ages and Stages
 
 ### Added

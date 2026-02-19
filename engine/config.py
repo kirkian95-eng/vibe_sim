@@ -31,13 +31,13 @@ class SimConfig:
     # ── Firms ───────────────────────────────────────────────────────
     num_food_firms: int = 1  # Fixed at 1 per good; scaling overrides
     num_energy_firms: int = 1
-    num_shelter_firms: int = 0  # govt provides shelter; set 0 to avoid unused firms
+    num_shelter_firms: int = 1  # landlord firms that own and rent housing
     num_healthcare_firms: int = 1
 
     # ── Production (Cobb-Douglas) ─────────────────────────────────
     # Calibrated so meeting demand requires most of labor force (~5% unemployment)
-    food_productivity: float = 2.2
-    energy_productivity: float = 1.8
+    food_productivity: float = 2.25
+    energy_productivity: float = 2.25
     shelter_productivity: float = 0.8
     healthcare_productivity: float = 5.0  # visits per worker per month
     labor_share: float = 0.7
@@ -57,14 +57,15 @@ class SimConfig:
     shelter_need: float = 1.0
     child_food_fraction: float = 0.5  # children consume 50% of adult food
 
+    # ── Housing ───────────────────────────────────────────────────────
+    initial_housing_stock_per_capita: float = 1.2  # housing units per person (>1 = vacancy)
+    shelter_rent_price: float = 720.0  # initial monthly rent per unit
+
     # ── Prices (initial, per unit) ──────────────────────────────────
     # Start near equilibrium (~cost-based) to avoid price spikes/collapses
     initial_food_price: float = 25.0
     initial_energy_price: float = 20.0
-    initial_shelter_price: float = 600.0
-    # Shelter: fixed-price govt provision, ~30% of monthly wage (see markets.py TRADEOFF)
-    # Set to 1 for effectively free shelter (minimal money destruction)
-    shelter_fixed_price: float = 720.0  # 0.3 * initial_wage
+    initial_shelter_price: float = 720.0  # monthly rent
 
     # ── Wages (monthly) ─────────────────────────────────────────────
     initial_wage: float = 2400.0

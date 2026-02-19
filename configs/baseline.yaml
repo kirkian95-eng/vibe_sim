@@ -12,12 +12,12 @@ owner_fraction: 0.01
 # Firms
 num_food_firms: 1
 num_energy_firms: 1
-num_shelter_firms: 0  # govt provides shelter
+num_shelter_firms: 1  # landlord firms that own and rent housing
 num_healthcare_firms: 1
 
 # Production (Cobb-Douglas) - calibrated for stable supply/demand balance
-food_productivity: 2.2
-energy_productivity: 1.8
+food_productivity: 2.25
+energy_productivity: 2.25
 shelter_productivity: 0.8
 healthcare_productivity: 5.0
 labor_share: 0.7
@@ -40,9 +40,11 @@ child_food_fraction: 0.5
 # Initial prices (per unit) - near equilibrium to avoid spikes/collapses
 initial_food_price: 25.0
 initial_energy_price: 20.0
-initial_shelter_price: 600.0
-# Shelter: temporarily govt-provided at fixed price (see markets.py TRADEOFF)
-shelter_fixed_price: 720.0  # ~30% of initial wage
+initial_shelter_price: 720.0  # monthly rent
+
+# Housing
+initial_housing_stock_per_capita: 1.2
+shelter_rent_price: 720.0
 
 # Wages (monthly)
 initial_wage: 2400.0

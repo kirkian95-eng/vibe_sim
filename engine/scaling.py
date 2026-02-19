@@ -27,20 +27,21 @@ def scaled_firm_counts(config: SimConfig) -> dict[str, int]:
     return {
         "food": 1,
         "energy": 1,
-        "shelter": config.num_shelter_firms,
+        "shelter": max(1, config.num_shelter_firms),
         "healthcare": 1,
     }
 
 
 def _est_demand(config: SimConfig, counts: dict[str, int]) -> dict[str, float]:
-    """Estimate consumption demand by good (before individuals exist). Ages 1-72 → ~33% child."""
+    """Estimate consumption demand by good (before individuals exist). Ages uniform 1-72 → ~24% child."""
     n = config.num_individuals
     needs = config.consumption_needs()
-    # Approx: 1/3 children, 2/3 adults+retirees
-    adult_eq = n * 0.67 + n * 0.33 * config.child_food_fraction  # food-equivalent
+    # Uniform 1-72 years: ~24% children (<18), ~66% adults (18-64), ~10% retirees (65+)
+    adult_eq = n * 0.76 + n * 0.24 * config.child_food_fraction  # food-equivalent
     return {
         "food": adult_eq * needs["food"],
         "energy": n * needs["energy"],
+        "shelter": n * needs["shelter"],
     }
 
 
@@ -76,11 +77,23 @@ def scaled_firm_endowments(
             continue
         d = demand.get(good, n)
         demand_per_firm = d / count
-        capital_per_unit = 0.4  # K/demand ratio for Cobb-Douglas
+        capital_per_unit = 1.5  # K/demand ratio for Cobb-Douglas
         result[good] = {
             "cash": firm_cash,
             "capital": demand_per_firm * capital_per_unit,
             "inventory": demand_per_firm * config.target_inventory_months,
+        }
+
+    # Shelter firms: housing stock is a durable asset, not produced via Cobb-Douglas
+    shelter_count = counts.get("shelter", 1)
+    if shelter_count > 0:
+        total_housing = n * config.initial_housing_stock_per_capita
+        housing_per_firm = total_housing / shelter_count
+        result["shelter"] = {
+            "cash": firm_cash,
+            "capital": 0.0,
+            "inventory": 0.0,
+            "housing_units": housing_per_firm,
         }
 
     # Healthcare firms (no inventory/capital in same way)
