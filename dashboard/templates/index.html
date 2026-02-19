@@ -371,7 +371,7 @@
             <div class="param-row">
                 <div>
                     <label>Shelter</label>
-                    <input type="number" id="num_shelter_firms" value="0" min="0" max="20" title="0 = govt provides shelter">
+                    <input type="number" id="num_shelter_firms" value="1" min="1" max="20" title="Landlord firms that own and rent housing">
                 </div>
                 <div>
                     <label>Profit Dist Rate</label>
@@ -422,8 +422,8 @@
             </div>
             <div class="param-row">
                 <div>
-                    <label>Shelter Fixed Price</label>
-                    <input type="number" id="shelter_fixed_price" value="720" min="0" max="10000">
+                    <label>Initial Rent</label>
+                    <input type="number" id="initial_shelter_price" value="720" min="10" max="10000">
                 </div>
                 <div></div>
             </div>
@@ -432,11 +432,11 @@
             <div class="param-row">
                 <div>
                     <label>Food Productivity</label>
-                    <input type="number" id="food_productivity" value="2.2" step="0.5" min="0.1" max="50">
+                    <input type="number" id="food_productivity" value="2.25" step="0.25" min="0.1" max="50">
                 </div>
                 <div>
                     <label>Energy Productivity</label>
-                    <input type="number" id="energy_productivity" value="1.8" step="0.5" min="0.1" max="50">
+                    <input type="number" id="energy_productivity" value="2.25" step="0.25" min="0.1" max="50">
                 </div>
             </div>
             <div class="param-row">
@@ -605,6 +605,7 @@
                     <button class="tab" onclick="showTab('production', this)">Production</button>
                     <button class="tab" onclick="showTab('demographics', this)">Demographics</button>
                     <button class="tab" onclick="showTab('healthcare', this)">Healthcare</button>
+                    <button class="tab" onclick="showTab('housing', this)">Housing</button>
                     <button class="tab" onclick="showTab('bonds', this)">Bonds</button>
                     <button class="tab" onclick="showTab('city', this)">City View</button>
                 </div>
@@ -690,7 +691,7 @@ function getConfig() {
         price_adjustment_speed: +document.getElementById('price_adjustment_speed').value,
         initial_food_price: +document.getElementById('initial_food_price').value,
         initial_energy_price: +document.getElementById('initial_energy_price').value,
-        shelter_fixed_price: +document.getElementById('shelter_fixed_price').value,
+        initial_shelter_price: +document.getElementById('initial_shelter_price').value,
         // Production
         food_productivity: +document.getElementById('food_productivity').value,
         energy_productivity: +document.getElementById('energy_productivity').value,
@@ -1440,11 +1441,20 @@ function renderCharts(data, tab) {
             ts('energy_produced', 'Produced', '#6c8cff'),
             ts('energy_sold', 'Sold', '#ffe66d'),
         ]);
-        addChart('Shelter', [
-            ts('shelter_produced', 'Produced', '#6c8cff'),
-            ts('shelter_sold', 'Sold', '#4ecdc4'),
+        addChart('Shelter (Units Rented)', [
+            ts('shelter_sold', 'Rented', '#4ecdc4'),
         ]);
         addChart('Journal Entries / Month', [ts('journal_entries_this_month', 'Entries', '#8b8fa3')]);
+    } else if (tab === 'housing') {
+        addChart('Housing Stock', [ts('housing_units', 'Units', '#6c8cff')]);
+        addChart('Vacancy Rate', [ts('housing_vacancy_rate', 'Vacancy', '#4ecdc4')]);
+        addChart('Rent (Shelter Price)', [ts('shelter_price', 'Rent', '#ffe66d')]);
+        addChart('Rent Burden (Rent / Avg Wage)', [ts('rent_burden', 'Burden', '#ff6c6c')]);
+        addChart('Construction Pipeline', [
+            ts('housing_starts', 'Starts', '#4ecdc4'),
+            ts('housing_completions', 'Completions', '#6c8cff'),
+            ts('housing_under_construction', 'Under Construction', '#ffe66d'),
+        ], true);
     } else if (tab === 'demographics') {
         addChart('Population', [ts('population', 'Population', '#6c8cff')]);
         addChart('Population by Stage', [
