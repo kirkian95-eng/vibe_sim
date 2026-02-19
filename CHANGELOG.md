@@ -27,6 +27,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/).
 - **Government spending**: Now distributed to all non-healthcare firms including
   shelter firms. Removed treasury recycling mechanism that was specific to the
   shelter nerf.
+- **Proportional labor allocation**: Goods firms (food, energy) now receive
+  workers proportional to their demand, preventing systematic starvation of
+  any sector. Previously, greedy allocation meant whichever firm sorted first
+  got all its workers. New 3-phase system: healthcare (priority) → shelter
+  maintenance (priority) → goods firms (proportional).
+- **Production calibration**: `food_productivity` 2.2→2.25,
+  `energy_productivity` 1.8→2.25. Equal productivities eliminate a systematic
+  energy undersupply that caused price spirals ($20→$578 over 60 months).
+- **Capital endowment**: `capital_per_unit` ratio 0.4→1.5 in scaling, giving
+  firms enough capital for Cobb-Douglas to meet demand with available labor.
+- **Demand estimation**: Corrected child fraction from 33% to 24% in
+  `_est_demand()` to match the actual uniform age distribution (1–72 years).
 
 ### Removed
 - **Shelter nerf (v0.22)**: Removed `post_shelter_purchase_from_govt()`,

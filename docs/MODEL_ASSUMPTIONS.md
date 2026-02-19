@@ -1,7 +1,7 @@
 # Model Assumptions
 
 This document describes the modelling choices, economic framework,
-and known limitations of VibeSim v0.2.
+and known limitations of VibeSim v0.3.
 
 ---
 
@@ -189,11 +189,16 @@ All retired individuals receive a monthly pension:
 ### Labor Market
 
 1. Firms compute desired labor from their production target
-2. Demand is constrained by firm cash (can't hire without funds)
-3. Workers are shuffled randomly; firms sorted by wage (highest first)
-4. Workers allocated greedily until each firm's demand is met
+2. Workers are shuffled randomly for fairness
+3. Hiring proceeds in three phases:
+   - **Healthcare** (priority): hires first to meet elder care demand
+   - **Shelter maintenance** (priority): small fixed demand (~1 per 20 housing units)
+   - **Goods firms** (proportional): food and energy firms split remaining
+     workers proportional to their labor demand, preventing any sector
+     from being systematically starved
+4. If firms are short on cash, the bank extends payroll loans
 5. Wages paid immediately via ledger entry
-6. Only living adults are eligible for employment
+6. Only living adults (not children, retirees, or owners) are eligible
 
 **Limitations**: No skill heterogeneity, no search frictions, employment
 resets monthly (no contracts).
