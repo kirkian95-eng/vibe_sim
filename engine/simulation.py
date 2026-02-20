@@ -260,15 +260,15 @@ class Simulation:
 
         # 5. Government operations (spending + tax collection)
         t0 = time.perf_counter()
+        avg_wage = sum(f.wage_offer for f in self.firms) / max(1, len(self.firms))
         govt_stats = government_operations(
             self.ledger, self.month, cfg, self.govt, self.bank,
-            self.individuals, self.firms,
+            self.individuals, self.firms, avg_wage,
         )
         self._profile("government", time.perf_counter() - t0)
 
         # 6. Pension payments
         t0 = time.perf_counter()
-        avg_wage = sum(f.wage_offer for f in self.firms) / max(1, len(self.firms))
         pension_stats = pension_operations(
             self.ledger, self.month, cfg, self.govt, self.bank,
             self.individuals, avg_wage,

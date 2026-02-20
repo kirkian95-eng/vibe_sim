@@ -191,10 +191,12 @@ def government_operations(
     bank: Bank,
     individuals: list[Individual],
     firms: list[Firm],
+    avg_wage: float = 0.0,
 ) -> dict[str, float]:
     """
     Government collects income tax, pays transfers, and purchases from firms.
     Taxes destroy money; spending creates money.
+    Transfers and spending are indexed to average wage so they stay in "real dollars".
     """
     stats: dict[str, float] = {}
     total_tax = 0.0
@@ -229,16 +231,22 @@ def government_operations(
         and not ind.employed
         and not ind.is_owner
     ]
+    # Transfer amount indexed to average wage to maintain real value.
+    # Config value is calibrated to initial_wage; scale proportionally.
+    wage_scale = avg_wage / config.initial_wage if avg_wage > 0 and config.initial_wage > 0 else 1.0
+    transfer_amount = config.monthly_govt_transfer * wage_scale
+
     for ind in unemployed:
-        amount = config.monthly_govt_transfer
-        post_transfer_payment(ledger, month, govt, bank, ind, amount)
-        total_transfers += amount
-        transfers_to_households += amount
+        post_transfer_payment(ledger, month, govt, bank, ind, transfer_amount)
+        total_transfers += transfer_amount
+        transfers_to_households += transfer_amount
 
     # General government spending (purchases from non-healthcare firms)
+    # Indexed to average wage to maintain real value.
+    govt_spending = config.monthly_govt_spending * wage_scale
     non_hc_firms = [f for f in firms if not f.is_healthcare]
-    if config.monthly_govt_spending > 0 and non_hc_firms:
-        per_firm = config.monthly_govt_spending / len(non_hc_firms)
+    if govt_spending > 0 and non_hc_firms:
+        per_firm = govt_spending / len(non_hc_firms)
         for firm in non_hc_firms:
             post_government_spending(
                 ledger, month, govt, bank, firm.id, per_firm,
