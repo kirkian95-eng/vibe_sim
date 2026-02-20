@@ -28,3 +28,12 @@ The double-entry bookkeeping is an implementation detail that ensures consistenc
 - Fix bugs in model logic (like inverted wage adjustment). Do not spend time tuning default config parameters to make the economy "look right" — that is the user's job.
 - The scenario presets (stimulus, austerity, etc.) are saved settings, not correctness tests. They should work directionally but don't need to produce specific numeric outcomes.
 - Keep test runtimes under 2 minutes total for the core suite (smoke + accounting + io).
+
+## Documentation Updates
+
+After any major change (new feature, structural refactor, new config params, new simulation phase), update these files:
+- **README.md** — feature list, simulation loop description, config table, current development section
+- **plan.md** — mark completed phases, add new phases if scope expanded
+- **DECISIONS.md** — document the design decision, alternatives considered, and tradeoffs
+- **ROADMAP** — update phase status markers ([DONE], etc.)
+- **configs/baseline.yaml** — add any new config params with comments

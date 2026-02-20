@@ -108,13 +108,17 @@ Turn shelter into a real asset market and firms into entities that can fail, rec
 
 ### Progress
 - [x] Phase 1: Housing rental market (replaces shelter nerf)
-- [ ] Phase 2: Housing development (construction pipeline)
+- [x] Phase 2: Housing development (construction pipeline)
+- [x] Phase 2.5: Frictional unemployment (job separation rate)
+- [x] Phase 2.6: Wage-indexed fiscal policy (real-dollar transfers & spending)
+- [x] Phase 2.7: Capital investment & depreciation (demand-driven + maintenance)
+- [x] Phase 2.8: Dashboard overhaul (policy levers vs advanced, housing tab)
 - [ ] Phase 3: Firm equity and profit distribution overhaul
 - [ ] Phase 4: Firm insolvency
 - [ ] Phase 5: Managers and college
 - [ ] Phase 6: Childcare and schools
 
-See `plans.md` for detailed phase-by-phase implementation plan.
+See `DECISIONS.md` for design tradeoffs and rationale.
 
 ### Major themes
 1. **Housing market and property development**

@@ -15,13 +15,17 @@ Think of it as SimCity for macroeconomics — tune the knobs, watch the dials, a
 - **Multi-Agent Economy**: Workers, firms (food/energy/healthcare), landlord firms (shelter/housing), a bank, and a consolidated government
 - **Demographics**: Individual lifecycle — children, working-age adults, retirees. Births, deaths, aging, and life-stage transitions
 - **Policy Levers**: Tax rates, government spending, transfers, minimum wage, pension replacement rate, retirement age
+- **Housing Market**: Shelter firms own housing stock, collect rent, and build new units via a multi-month construction pipeline when vacancy is low
+- **Capital Investment**: Firms invest in productive capital from available cash (maintenance + demand-driven), with monthly depreciation
+- **Frictional Unemployment**: Job separation rate creates realistic baseline unemployment (~3%)
+- **Real-Dollar Fiscal Policy**: Government transfers and spending indexed to average wages to maintain purchasing power
 - **Government Bonds**: Monthly bond market with interest rate clearing and coupon payments
 - **Healthcare Sector**: Capacity-constrained healthcare funded by government (elder care) and private payments (childbirth)
 - **Pensions**: Government-funded retirement income indexed to average wages
 - **Scenario Shocks**: Built-in presets for stimulus, austerity, tax reform, tech booms, energy crises
 - **MMT Money Model**: Government spending creates money; taxation destroys it
 - **Cobb-Douglas Production**: Standard production functions with labor and capital inputs
-- **Interactive Dashboard**: Flask + Plotly web UI with tabs for macro, prices, distribution, production, demographics, healthcare, bonds, and a city view animation
+- **Interactive Dashboard**: Flask + Plotly web UI with tabs for macro, prices, distribution, production, demographics, healthcare, housing, bonds, and a city view animation
 - **Reproducible**: Seeded RNG — same seed, same results
 - **Exportable**: CSV output, YAML configs, run artifact saving
 
@@ -93,18 +97,21 @@ Each simulated month follows this cycle:
 1. **Demographics** — advance ages, life-stage transitions (child→adult→retired)
 2. **Births** — eligible adult pairs may produce children (with healthcare fee)
 3. **Deaths** — mortality hazard for the elderly; estate settlement
-4. **Government** — collects taxes and makes transfer payments
+4. **Government** — collects taxes, makes transfer payments (wage-indexed)
 5. **Pensions** — monthly pension payments to all retirees
-6. **Labor market** — firms hire workers and pay wages (healthcare firms included)
-7. **Production** — firms produce goods using labor + capital
-8. **Healthcare** — government pays for elder visits; capacity tracking
-9. **Goods market** — individuals buy food, energy; rent shelter from landlord firms (guardians pay for children)
-10. **Consumption** — individuals use what they bought
-11. **Profit distribution** — firms pay owners (monthly)
-12. **Bond market** — government issues bonds to cover deficit; bisection clearing
-13. **Bond interest** — monthly coupon payments to bondholders
-14. **Price/wage adjustment** — firms and wages respond to market signals
-15. **Metrics** — collect monthly statistics
+6. **Housing development** — construction pipeline: complete, tick, start projects
+7. **Labor market** — firms hire workers and pay wages (with frictional separation)
+8. **Production** — firms produce goods using labor + capital; capital depreciates
+9. **Healthcare** — government pays for elder visits; capacity tracking
+10. **Goods market** — individuals buy food, energy; rent shelter from landlord firms
+11. **Consumption** — individuals use what they bought
+12. **Capital investment** — firms invest in capital (maintenance + demand-driven)
+13. **Loan repayment** — firms repay bank loans from available cash
+14. **Profit distribution** — firms pay owners from remaining undistributed profit
+15. **Bond market** — government issues bonds to cover deficit; bisection clearing
+16. **Bond interest** — monthly coupon payments to bondholders
+17. **Price/wage adjustment** — firms and wages respond to market signals
+18. **Metrics** — collect monthly statistics
 
 ### Money Creation (MMT)
 
@@ -114,13 +121,16 @@ Each simulated month follows this cycle:
 - The government deficit = net money injected into the private sector
 - Bonds convert deposits into bond assets (financial portfolio rebalancing)
 
-### Production
+### Production and Investment
 
 ```
 output = productivity × labor^0.7 × capital^0.3
 ```
 
-Standard Cobb-Douglas with diminishing returns.
+Standard Cobb-Douglas with diminishing returns. Capital depreciates at ~1%/month (~12% annual). Firms invest in capital from available cash:
+- **Maintenance** (2% of K/month) — offsets depreciation with a small growth bias
+- **Demand-driven** (up to 10% of K/month) — activates when inventory falls below target
+- Remaining profit is distributed to shareholders
 
 ### Demographics
 
@@ -153,8 +163,12 @@ Key parameters (see `engine/config.py` or `configs/baseline.yaml`):
 | `num_healthcare_firms` | 1 | 1 healthcare firm; scaling overrides |
 | `income_tax_rate` | 0.20 | Income tax rate |
 | `sales_tax_rate` | 0.05 | Sales tax rate |
-| `monthly_govt_spending` | 150000 | Monthly public goods spending |
-| `monthly_govt_transfer` | 300 | Monthly transfer per unemployed |
+| `monthly_govt_spending` | 150000 | Monthly public goods spending (wage-indexed) |
+| `monthly_govt_transfer` | 300 | Monthly transfer per unemployed (wage-indexed) |
+| `job_separation_rate` | 0.03 | Monthly job loss probability (~3% frictional unemployment) |
+| `capital_depreciation_rate` | 0.01 | Monthly capital depreciation (~12% annual) |
+| `firm_investment_rate` | 0.10 | Demand-driven investment rate (fraction of K at shortage) |
+| `firm_min_investment_rate` | 0.02 | Maintenance investment rate (fraction of K per month) |
 | `initial_wage` | 2400 | Starting monthly wage |
 | `retirement_age` | 65 | Age of retirement (years) |
 | `pension_replacement_rate` | 0.50 | Pension as fraction of avg wage |
@@ -206,7 +220,7 @@ print(f"Population:   {stim_results[-1].population}")
 
 ```
 engine/              # Core simulation (importable Python package)
-  simulation.py      # Main monthly loop (16 phases)
+  simulation.py      # Main monthly loop (18 phases)
   config.py          # SimConfig dataclass
   ledger.py          # Double-entry transaction ledger
   actors.py          # Individual, Firm, Bank, Government
@@ -225,16 +239,22 @@ configs/             # YAML config presets
 
 ## Current Development (v0.3)
 
-v0.3 is in progress — see `plan.md` and `plans.md` for details. Completed so far:
-- **Housing rental market** — shelter firms own housing stock and collect rent (replaces the v0.22 shelter nerf)
+v0.3 is in progress — see `plan.md` for the full roadmap and `DECISIONS.md` for design tradeoffs.
 
-Still to come in v0.3: housing development, firm equity/insolvency, managers, college, childcare.
+Completed in v0.3:
+- **Housing rental market** — shelter firms own durable housing stock and collect rent
+- **Housing development** — multi-month construction pipeline triggered by low vacancy
+- **Frictional unemployment** — job separation rate creates ~3% baseline unemployment
+- **Wage-indexed fiscal policy** — transfers and spending maintain real purchasing power
+- **Capital investment & depreciation** — firms invest based on demand signals with maintenance bias; capital depreciates monthly
+- **Dashboard overhaul** — policy levers vs. advanced params, housing tab, correct shelter display
+
+Still to come in v0.3: firm insolvency, managers, college, childcare.
 
 ## Future Directions
 
 - Fiscal and monetary policy stabilizers (v0.4)
 - Trade with a second country (v0.5)
-- Capital investment and depreciation
 - Open economy (trade, exchange rates)
 - Heterogeneous agents (skills, preferences)
 - Immigration and emigration

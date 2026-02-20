@@ -17,9 +17,20 @@ v0.3 - shelters & firms overhaul (IN PROGRESS)
       - shelter firms are landlords that own housing stock and collect rent
       - removed all govt shelter provision code (shelter nerf retired)
       - rent prices adjust based on vacancy rate
-   Phase 2: housing development
+   Phase 2: housing development [DONE]
       - shelter firms build new housing using labor and capital
       - multi-month construction pipeline
+   Phase 2.5: frictional unemployment [DONE]
+      - job separation rate creates ~3% baseline unemployment
+   Phase 2.6: wage-indexed fiscal policy [DONE]
+      - transfers and spending scale with avg_wage / initial_wage
+   Phase 2.7: capital investment & depreciation [DONE]
+      - firms invest in capital (maintenance + demand-driven)
+      - capital depreciates monthly (~12% annual)
+      - investment runs before loan repayment; capped at 30% of cash
+   Phase 2.8: dashboard overhaul [DONE]
+      - policy levers vs advanced model assumptions
+      - housing tab, correct shelter display
    Phase 3: firm equity & profit distribution
       - firms have equity owned by shareholders
       - profit distribution proportional to share ownership
