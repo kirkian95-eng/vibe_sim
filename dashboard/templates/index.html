@@ -331,167 +331,21 @@
 
     <div class="container">
         <div class="sidebar">
-            <h2>Parameters</h2>
+            <h2>Policy Levers</h2>
 
-            <h3>General</h3>
+            <h3>Simulation</h3>
             <div class="param-row">
                 <div>
                     <label>Months</label>
                     <input type="number" id="num_months" value="120" min="6" max="1200">
                 </div>
                 <div>
-                    <label>Seed</label>
-                    <input type="number" id="seed" value="42">
-                </div>
-            </div>
-
-            <h3>Population</h3>
-            <div class="param-row">
-                <div>
-                    <label>Individuals</label>
+                    <label>Population</label>
                     <input type="number" id="num_individuals" value="500" min="50" max="10000">
                 </div>
-                <div>
-                    <label>Owner %</label>
-                    <input type="number" id="owner_fraction" value="0.01" step="0.01" min="0.005" max="0.2">
-                </div>
             </div>
 
-            <h3>Firms</h3>
-            <div class="param-row">
-                <div>
-                    <label>Food</label>
-                    <input type="number" id="num_food_firms" value="1" min="1" max="1" title="Fixed at 1 firm per good type">
-                </div>
-                <div>
-                    <label>Energy</label>
-                    <input type="number" id="num_energy_firms" value="1" min="1" max="1" title="Fixed at 1 firm per good type">
-                </div>
-            </div>
-            <div class="param-row">
-                <div>
-                    <label>Shelter</label>
-                    <input type="number" id="num_shelter_firms" value="1" min="1" max="20" title="Landlord firms that own and rent housing">
-                </div>
-                <div>
-                    <label>Profit Dist Rate</label>
-                    <input type="number" id="profit_distribution_rate" value="0.50" step="0.05" min="0" max="1.0">
-                </div>
-            </div>
-            <div class="param-row">
-                <div>
-                    <label>Target Inv Months</label>
-                    <input type="number" id="target_inventory_months" value="2.0" step="0.5" min="0.5" max="12">
-                </div>
-                <div>
-                    <label>Interest Rate</label>
-                    <input type="number" id="interest_rate" value="0.05" step="0.01" min="0" max="0.5">
-                </div>
-            </div>
-
-            <h3>Labor Market</h3>
-            <div class="param-row">
-                <div>
-                    <label>Separation Rate</label>
-                    <input type="number" id="job_separation_rate" value="0.03" step="0.01" min="0" max="0.5" title="Monthly probability of job loss → frictional unemployment">
-                </div>
-                <div></div>
-            </div>
-
-            <h3>Wages &amp; Prices</h3>
-            <div class="param-row">
-                <div>
-                    <label>Init Wage</label>
-                    <input type="number" id="initial_wage" value="2400" min="10" max="15000">
-                </div>
-                <div>
-                    <label>Min Wage</label>
-                    <input type="number" id="min_wage" value="600" min="0" max="10000">
-                </div>
-            </div>
-            <div class="param-row">
-                <div>
-                    <label>Wage Adj Speed</label>
-                    <input type="number" id="wage_adjustment_speed" value="0.06" step="0.01" min="0" max="0.5">
-                </div>
-                <div>
-                    <label>Price Adj Speed</label>
-                    <input type="number" id="price_adjustment_speed" value="0.06" step="0.01" min="0" max="0.5">
-                </div>
-            </div>
-            <div class="param-row">
-                <div>
-                    <label>Init Food Price</label>
-                    <input type="number" id="initial_food_price" value="25" min="1" max="10000">
-                </div>
-                <div>
-                    <label>Init Energy Price</label>
-                    <input type="number" id="initial_energy_price" value="20" min="1" max="10000">
-                </div>
-            </div>
-            <div class="param-row">
-                <div>
-                    <label>Initial Rent</label>
-                    <input type="number" id="initial_shelter_price" value="720" min="10" max="10000">
-                </div>
-                <div></div>
-            </div>
-
-            <h3>Production</h3>
-            <div class="param-row">
-                <div>
-                    <label>Food Productivity</label>
-                    <input type="number" id="food_productivity" value="2.25" step="0.25" min="0.1" max="50">
-                </div>
-                <div>
-                    <label>Energy Productivity</label>
-                    <input type="number" id="energy_productivity" value="2.25" step="0.25" min="0.1" max="50">
-                </div>
-            </div>
-            <div class="param-row">
-                <div>
-                    <label>HC Productivity</label>
-                    <input type="number" id="healthcare_productivity" value="5.0" step="0.5" min="0.1" max="50">
-                </div>
-                <div>
-                    <label>Shelter Productivity</label>
-                    <input type="number" id="shelter_productivity" value="0.8" step="0.1" min="0.1" max="50">
-                </div>
-            </div>
-            <div class="param-row">
-                <div>
-                    <label>Labor Share</label>
-                    <input type="number" id="labor_share" value="0.7" step="0.05" min="0.1" max="0.95">
-                </div>
-                <div>
-                    <label>Capital Share</label>
-                    <input type="number" id="capital_share" value="0.3" step="0.05" min="0.05" max="0.9">
-                </div>
-            </div>
-
-            <h3>Consumption</h3>
-            <div class="param-row">
-                <div>
-                    <label>Food Need</label>
-                    <input type="number" id="food_need" value="1.0" step="0.1" min="0.1" max="10">
-                </div>
-                <div>
-                    <label>Energy Need</label>
-                    <input type="number" id="energy_need" value="1.0" step="0.1" min="0.1" max="10">
-                </div>
-            </div>
-            <div class="param-row">
-                <div>
-                    <label>Shelter Need</label>
-                    <input type="number" id="shelter_need" value="1.0" step="0.1" min="0.1" max="10">
-                </div>
-                <div>
-                    <label>Child Food Frac</label>
-                    <input type="number" id="child_food_fraction" value="0.5" step="0.1" min="0" max="1.0">
-                </div>
-            </div>
-
-            <h3>Government</h3>
+            <h3>Fiscal Policy</h3>
             <div class="param-row">
                 <div>
                     <label>Income Tax</label>
@@ -513,64 +367,50 @@
                 </div>
             </div>
 
-            <h3>Demographics</h3>
+            <h3>Labor &amp; Wages</h3>
+            <div class="param-row">
+                <div>
+                    <label>Min Wage</label>
+                    <input type="number" id="min_wage" value="600" min="0" max="10000">
+                </div>
+                <div>
+                    <label>Separation Rate</label>
+                    <input type="number" id="job_separation_rate" value="0.03" step="0.01" min="0" max="0.5" title="Monthly probability of job loss">
+                </div>
+            </div>
             <div class="param-row">
                 <div>
                     <label>Retirement Age</label>
                     <input type="number" id="retirement_age" value="65" min="50" max="80">
                 </div>
                 <div>
-                    <label>Pension Replace Rate</label>
+                    <label>Pension Rate</label>
                     <input type="number" id="pension_replacement_rate" value="0.50" step="0.05" min="0" max="1.0">
                 </div>
             </div>
+
+            <h3>Monetary Policy</h3>
             <div class="param-row">
                 <div>
-                    <label>Mortality Start Age</label>
-                    <input type="number" id="mortality_start_age" value="72" min="60" max="100">
+                    <label>Interest Rate</label>
+                    <input type="number" id="interest_rate" value="0.05" step="0.01" min="0" max="0.5">
                 </div>
                 <div>
-                    <label>Target Death Age</label>
-                    <input type="number" id="target_death_age" value="80" min="65" max="120">
+                    <label>Bond Duration (mo)</label>
+                    <input type="number" id="bond_duration_months" value="120" min="6" max="600">
                 </div>
             </div>
+
+            <h3>Demographics</h3>
             <div class="param-row">
                 <div>
                     <label>Fertility Rate/yr</label>
                     <input type="number" id="fertility_rate_annual" value="0.02" step="0.005" min="0" max="0.1">
                 </div>
-                <div></div>
-            </div>
-
-            <h3>Healthcare</h3>
-            <div class="param-row">
                 <div>
-                    <label>HC Firms</label>
-                    <input type="number" id="num_healthcare_firms" value="1" min="1" max="1" title="Fixed at 1 firm per good type">
+                    <label>Owner %</label>
+                    <input type="number" id="owner_fraction" value="0.01" step="0.01" min="0.005" max="0.2">
                 </div>
-                <div>
-                    <label>Elder HC Mo Cost</label>
-                    <input type="number" id="elder_healthcare_monthly_cost" value="500" min="0" max="5000">
-                </div>
-            </div>
-
-            <h3>Bonds</h3>
-            <div class="param-row">
-                <div>
-                    <label>Bond Duration (mo)</label>
-                    <input type="number" id="bond_duration_months" value="120" min="6" max="600">
-                </div>
-                <div>
-                    <label>Bond Rate Min</label>
-                    <input type="number" id="bond_rate_min" value="0.005" step="0.005" min="0" max="0.5">
-                </div>
-            </div>
-            <div class="param-row">
-                <div>
-                    <label>Bond Rate Max</label>
-                    <input type="number" id="bond_rate_max" value="0.15" step="0.01" min="0.01" max="1.0">
-                </div>
-                <div></div>
             </div>
 
             <h3>Scenario Shock</h3>
@@ -597,6 +437,169 @@
                     <div style="color: var(--text-dim)">No shocks applied</div>
                 </div>
             </div>
+
+            <div class="advanced-toggle" style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border);">
+                <button class="secondary" style="font-size: 11px; padding: 6px 10px;" onclick="toggleAdvanced()">
+                    <span id="advanced-arrow">&#9654;</span> Advanced / Model Assumptions
+                </button>
+            </div>
+            <div id="advanced-section" style="display: none;">
+                <div style="margin: 10px 0; padding: 8px; background: rgba(255, 108, 108, 0.1); border: 1px solid rgba(255, 108, 108, 0.25); border-radius: 4px; font-size: 10px; color: var(--accent2); line-height: 1.4;">
+                    These parameters are co-calibrated. Changing one in isolation (e.g. wages without prices, or productivity without consumption) can produce unstable or unrealistic results.
+                </div>
+
+                <h3>Initial Prices &amp; Wages</h3>
+                <div class="param-row">
+                    <div>
+                        <label>Init Wage</label>
+                        <input type="number" id="initial_wage" value="2400" min="10" max="15000">
+                    </div>
+                    <div>
+                        <label>Initial Rent</label>
+                        <input type="number" id="initial_shelter_price" value="720" min="10" max="10000">
+                    </div>
+                </div>
+                <div class="param-row">
+                    <div>
+                        <label>Init Food Price</label>
+                        <input type="number" id="initial_food_price" value="25" min="1" max="10000">
+                    </div>
+                    <div>
+                        <label>Init Energy Price</label>
+                        <input type="number" id="initial_energy_price" value="20" min="1" max="10000">
+                    </div>
+                </div>
+                <div class="param-row">
+                    <div>
+                        <label>Wage Adj Speed</label>
+                        <input type="number" id="wage_adjustment_speed" value="0.06" step="0.01" min="0" max="0.5">
+                    </div>
+                    <div>
+                        <label>Price Adj Speed</label>
+                        <input type="number" id="price_adjustment_speed" value="0.06" step="0.01" min="0" max="0.5">
+                    </div>
+                </div>
+
+                <h3>Production</h3>
+                <div class="param-row">
+                    <div>
+                        <label>Food Productivity</label>
+                        <input type="number" id="food_productivity" value="2.25" step="0.25" min="0.1" max="50">
+                    </div>
+                    <div>
+                        <label>Energy Productivity</label>
+                        <input type="number" id="energy_productivity" value="2.25" step="0.25" min="0.1" max="50">
+                    </div>
+                </div>
+                <div class="param-row">
+                    <div>
+                        <label>HC Productivity</label>
+                        <input type="number" id="healthcare_productivity" value="5.0" step="0.5" min="0.1" max="50">
+                    </div>
+                    <div>
+                        <label>Shelter Productivity</label>
+                        <input type="number" id="shelter_productivity" value="0.8" step="0.1" min="0.1" max="50">
+                    </div>
+                </div>
+                <div class="param-row">
+                    <div>
+                        <label>Labor Share</label>
+                        <input type="number" id="labor_share" value="0.7" step="0.05" min="0.1" max="0.95">
+                    </div>
+                    <div>
+                        <label>Capital Share</label>
+                        <input type="number" id="capital_share" value="0.3" step="0.05" min="0.05" max="0.9">
+                    </div>
+                </div>
+
+                <h3>Consumption</h3>
+                <div class="param-row">
+                    <div>
+                        <label>Food Need</label>
+                        <input type="number" id="food_need" value="1.0" step="0.1" min="0.1" max="10">
+                    </div>
+                    <div>
+                        <label>Energy Need</label>
+                        <input type="number" id="energy_need" value="1.0" step="0.1" min="0.1" max="10">
+                    </div>
+                </div>
+                <div class="param-row">
+                    <div>
+                        <label>Shelter Need</label>
+                        <input type="number" id="shelter_need" value="1.0" step="0.1" min="0.1" max="10">
+                    </div>
+                    <div>
+                        <label>Child Food Frac</label>
+                        <input type="number" id="child_food_fraction" value="0.5" step="0.1" min="0" max="1.0">
+                    </div>
+                </div>
+
+                <h3>Firms</h3>
+                <div class="param-row">
+                    <div>
+                        <label>Profit Dist Rate</label>
+                        <input type="number" id="profit_distribution_rate" value="0.50" step="0.05" min="0" max="1.0">
+                    </div>
+                    <div>
+                        <label>Target Inv Months</label>
+                        <input type="number" id="target_inventory_months" value="2.0" step="0.5" min="0.5" max="12">
+                    </div>
+                </div>
+                <div class="param-row">
+                    <div>
+                        <label>Shelter Firms</label>
+                        <input type="number" id="num_shelter_firms" value="1" min="1" max="20">
+                    </div>
+                    <div></div>
+                </div>
+
+                <h3>Demographics (Advanced)</h3>
+                <div class="param-row">
+                    <div>
+                        <label>Mortality Start Age</label>
+                        <input type="number" id="mortality_start_age" value="72" min="60" max="100">
+                    </div>
+                    <div>
+                        <label>Target Death Age</label>
+                        <input type="number" id="target_death_age" value="80" min="65" max="120">
+                    </div>
+                </div>
+
+                <h3>Healthcare</h3>
+                <div class="param-row">
+                    <div>
+                        <label>Elder HC Mo Cost</label>
+                        <input type="number" id="elder_healthcare_monthly_cost" value="500" min="0" max="5000">
+                    </div>
+                    <div></div>
+                </div>
+
+                <h3>Bonds (Advanced)</h3>
+                <div class="param-row">
+                    <div>
+                        <label>Bond Rate Min</label>
+                        <input type="number" id="bond_rate_min" value="0.005" step="0.005" min="0" max="0.5">
+                    </div>
+                    <div>
+                        <label>Bond Rate Max</label>
+                        <input type="number" id="bond_rate_max" value="0.15" step="0.01" min="0.01" max="1.0">
+                    </div>
+                </div>
+
+                <h3>Seed</h3>
+                <div class="param-row">
+                    <div>
+                        <label>Random Seed</label>
+                        <input type="number" id="seed" value="42">
+                    </div>
+                    <div></div>
+                </div>
+            </div>
+
+            <!-- Hidden inputs for fixed firm counts (always sent to backend) -->
+            <input type="hidden" id="num_food_firms" value="1">
+            <input type="hidden" id="num_energy_firms" value="1">
+            <input type="hidden" id="num_healthcare_firms" value="1">
         </div>
 
         <div class="main" id="main-area">
@@ -649,6 +652,18 @@ const PLOTLY_LAYOUT = {
     legend: { orientation: 'h', y: -0.15 },
     height: 280,
 };
+
+function toggleAdvanced() {
+    const section = document.getElementById('advanced-section');
+    const arrow = document.getElementById('advanced-arrow');
+    if (section.style.display === 'none') {
+        section.style.display = 'block';
+        arrow.innerHTML = '&#9660;';
+    } else {
+        section.style.display = 'none';
+        arrow.innerHTML = '&#9654;';
+    }
+}
 
 let currentData = null;
 let baselineData = null;
