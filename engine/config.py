@@ -44,7 +44,7 @@ class SimConfig:
     capital_share: float = 0.3
     capital_depreciation_rate: float = 0.01  # monthly depreciation (~12% annual)
     firm_investment_rate: float = 0.10  # demand-driven investment rate (fraction of K per month at full shortage)
-    firm_min_investment_rate: float = 0.02  # maintenance investment (fraction of K per month; net ~1%/mo after depreciation)
+    firm_min_investment_rate: float = 0.01  # maintenance investment (= depreciation → zero net growth without demand signal)
 
     # ── Initial endowments ──────────────────────────────────────────
     initial_firm_cash: float = 200_000.0  # enough to hire for demand-driven cold start (~95%)
@@ -61,8 +61,8 @@ class SimConfig:
     child_food_fraction: float = 0.5  # children consume 50% of adult food
 
     # ── Housing ───────────────────────────────────────────────────────
-    initial_housing_stock_per_capita: float = 1.2  # housing units per person (>1 = vacancy)
-    shelter_rent_price: float = 720.0  # initial monthly rent per unit
+    initial_housing_stock_per_capita: float = 1.05  # housing units per person (5% vacancy buffer)
+    shelter_rent_price: float = 150.0  # initial monthly rent per unit
 
     # ── Housing construction ─────────────────────────────────────────
     housing_construction_months: int = 6  # months to build one project
@@ -73,9 +73,9 @@ class SimConfig:
 
     # ── Prices (initial, per unit) ──────────────────────────────────
     # Start near equilibrium (~cost-based) to avoid price spikes/collapses
-    initial_food_price: float = 25.0
-    initial_energy_price: float = 20.0
-    initial_shelter_price: float = 720.0  # monthly rent
+    initial_food_price: float = 400.0
+    initial_energy_price: float = 400.0
+    initial_shelter_price: float = 150.0  # monthly rent
 
     # ── Labor market ────────────────────────────────────────────────
     job_separation_rate: float = 0.03  # monthly probability of losing job (frictional unemployment)

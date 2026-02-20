@@ -24,7 +24,7 @@ labor_share: 0.7
 capital_share: 0.3
 capital_depreciation_rate: 0.01  # monthly (~12% annual)
 firm_investment_rate: 0.10  # demand-driven investment rate (fraction of K at full shortage)
-firm_min_investment_rate: 0.02  # maintenance investment (net ~1%/mo after depreciation)
+firm_min_investment_rate: 0.01  # maintenance investment (= depreciation → zero net growth without demand)
 
 # Initial endowments
 initial_firm_cash: 200000.0  # enough for demand-driven cold start (~95% employment)
@@ -41,13 +41,13 @@ shelter_need: 1.0
 child_food_fraction: 0.5
 
 # Initial prices (per unit) - near equilibrium to avoid spikes/collapses
-initial_food_price: 25.0
-initial_energy_price: 20.0
-initial_shelter_price: 720.0  # monthly rent
+initial_food_price: 400.0
+initial_energy_price: 400.0
+initial_shelter_price: 150.0  # monthly rent
 
 # Housing
-initial_housing_stock_per_capita: 1.2
-shelter_rent_price: 720.0
+initial_housing_stock_per_capita: 1.05
+shelter_rent_price: 150.0
 
 # Housing construction
 housing_construction_months: 6
