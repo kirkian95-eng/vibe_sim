@@ -53,6 +53,9 @@ housing_construction_workers_per_project: 2
 housing_construction_vacancy_threshold: 0.10
 housing_construction_max_starts_fraction: 0.05
 
+# Labor market
+job_separation_rate: 0.03  # monthly separation probability → ~3% frictional unemployment
+
 # Wages (monthly)
 initial_wage: 2400.0
 min_wage: 600.0

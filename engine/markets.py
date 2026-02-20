@@ -364,6 +364,15 @@ def clear_labor_market(
         and not ind.is_owner
     ]
     rng.shuffle(workers)
+    total_labor_force = len(workers)
+
+    # Frictional unemployment: remove a fraction of workers from the hiring pool.
+    # These workers are "between jobs" — separated and searching, unavailable this month.
+    sep_rate = config.job_separation_rate
+    if sep_rate > 0 and total_labor_force > 0:
+        num_separated = max(0, round(total_labor_force * sep_rate))
+        if num_separated > 0:
+            workers = workers[:-num_separated]
 
     # Hiring order:
     #   1. Healthcare (priority — elder care demand)
@@ -425,12 +434,11 @@ def clear_labor_market(
             _hire_workers(firm, alloc)
             allocated_so_far += alloc
 
-    total_workers = len(workers)
-    unemployment_rate = 1.0 - (total_hired / max(total_workers, 1))
+    unemployment_rate = 1.0 - (total_hired / max(total_labor_force, 1))
 
     return {
         "total_hired": total_hired,
-        "total_workers": total_workers,
+        "total_workers": total_labor_force,
         "unemployment_rate": unemployment_rate,
         "total_wages": total_wages,
     }

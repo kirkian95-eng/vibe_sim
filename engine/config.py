@@ -74,6 +74,9 @@ class SimConfig:
     initial_energy_price: float = 20.0
     initial_shelter_price: float = 720.0  # monthly rent
 
+    # ── Labor market ────────────────────────────────────────────────
+    job_separation_rate: float = 0.03  # monthly probability of losing job (frictional unemployment)
+
     # ── Wages (monthly) ─────────────────────────────────────────────
     initial_wage: float = 2400.0
     min_wage: float = 600.0

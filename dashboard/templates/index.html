@@ -389,6 +389,15 @@
                 </div>
             </div>
 
+            <h3>Labor Market</h3>
+            <div class="param-row">
+                <div>
+                    <label>Separation Rate</label>
+                    <input type="number" id="job_separation_rate" value="0.03" step="0.01" min="0" max="0.5" title="Monthly probability of job loss → frictional unemployment">
+                </div>
+                <div></div>
+            </div>
+
             <h3>Wages &amp; Prices</h3>
             <div class="param-row">
                 <div>
@@ -684,6 +693,8 @@ function getConfig() {
         profit_distribution_rate: +document.getElementById('profit_distribution_rate').value,
         target_inventory_months: +document.getElementById('target_inventory_months').value,
         interest_rate: +document.getElementById('interest_rate').value,
+        // Labor market
+        job_separation_rate: +document.getElementById('job_separation_rate').value,
         // Wages & Prices
         initial_wage: +document.getElementById('initial_wage').value,
         min_wage: +document.getElementById('min_wage').value,
