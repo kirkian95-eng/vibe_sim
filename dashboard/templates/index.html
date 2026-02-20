@@ -547,10 +547,23 @@
                 </div>
                 <div class="param-row">
                     <div>
+                        <label>Depreciation/mo</label>
+                        <input type="number" id="capital_depreciation_rate" value="0.01" step="0.005" min="0" max="0.1" title="Monthly capital depreciation rate (~12% annual at 0.01)">
+                    </div>
+                    <div>
+                        <label>Maint Investment/mo</label>
+                        <input type="number" id="firm_min_investment_rate" value="0.02" step="0.005" min="0" max="0.1" title="Maintenance investment as fraction of capital per month">
+                    </div>
+                </div>
+                <div class="param-row">
+                    <div>
+                        <label>Demand Investment/mo</label>
+                        <input type="number" id="firm_investment_rate" value="0.10" step="0.01" min="0" max="0.5" title="Max demand-driven investment as fraction of capital per month">
+                    </div>
+                    <div>
                         <label>Shelter Firms</label>
                         <input type="number" id="num_shelter_firms" value="1" min="1" max="20">
                     </div>
-                    <div></div>
                 </div>
 
                 <h3>Demographics (Advanced)</h3>
@@ -725,6 +738,9 @@ function getConfig() {
         shelter_productivity: +document.getElementById('shelter_productivity').value,
         labor_share: +document.getElementById('labor_share').value,
         capital_share: +document.getElementById('capital_share').value,
+        capital_depreciation_rate: +document.getElementById('capital_depreciation_rate').value,
+        firm_investment_rate: +document.getElementById('firm_investment_rate').value,
+        firm_min_investment_rate: +document.getElementById('firm_min_investment_rate').value,
         // Consumption
         food_need: +document.getElementById('food_need').value,
         energy_need: +document.getElementById('energy_need').value,
@@ -1470,6 +1486,7 @@ function renderCharts(data, tab) {
         addChart('Shelter (Units Rented)', [
             ts('shelter_sold', 'Rented', '#4ecdc4'),
         ]);
+        addChart('Capital Investment', [ts('investment', 'Investment', '#ffe66d')]);
         addChart('Journal Entries / Month', [ts('journal_entries_this_month', 'Entries', '#8b8fa3')]);
     } else if (tab === 'housing') {
         addChart('Housing Stock', [ts('housing_units', 'Units', '#6c8cff')]);
