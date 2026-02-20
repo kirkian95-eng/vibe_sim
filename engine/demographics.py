@@ -226,6 +226,7 @@ def run_deaths(
     month: int,
     config: SimConfig,
     individuals: list[Individual],
+    firms: list[Firm],
     govt: Government,
     bank: Bank,
     rng: random.Random,
@@ -307,6 +308,14 @@ def run_deaths(
                     (f"{ind.id}:transfer_income", abs_eq, 0),
                     (f"{ind.id}:equity", 0, abs_eq),
                 ])
+
+        # Transfer shares to firm treasury (no heir succession yet).
+        if ind.shares:
+            firm_by_id = {f.id: f for f in firms}
+            for firm_id, share_count in ind.shares.items():
+                if share_count > 0 and firm_id in firm_by_id:
+                    firm_by_id[firm_id].treasury_shares += share_count
+            ind.shares.clear()
 
         deceased_ids.append(ind.id)
 

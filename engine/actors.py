@@ -58,7 +58,7 @@ class Individual(Actor):
     employed: bool = False
     employer_id: str | None = None
     is_owner: bool = False
-    owned_firm_id: str | None = None
+    shares: dict[str, int] = dc.field(default_factory=dict)  # firm_id -> share count
 
     # Demographics (v0.2)
     age_months: int = 0
@@ -130,7 +130,8 @@ class Firm(Actor):
     """A firm that produces one type of good."""
 
     good_type: GoodType = GoodType.FOOD
-    owner_id: str | None = None
+    shares_outstanding: int = 1000
+    treasury_shares: int = 0
     num_workers: int = 0
     wage_offer: float = 80.0
     price: float = 5.0
@@ -145,6 +146,11 @@ class Firm(Actor):
     def is_healthcare(self) -> bool:
         """True if this firm produces healthcare services."""
         return self.good_type == GoodType.HEALTHCARE
+
+    @property
+    def private_shares(self) -> int:
+        """Shares held by individuals (not treasury)."""
+        return self.shares_outstanding - self.treasury_shares
 
     @staticmethod
     def create(
@@ -251,6 +257,7 @@ def create_all_actors(
     initial_prices: dict[str, float],
     initial_wage: float,
     num_healthcare_firms: int = 2,
+    shares_per_firm: int = 1000,
     rng: Random | None = None,
 ) -> dict:
     """
@@ -328,13 +335,18 @@ def create_all_actors(
         )
         individuals.append(ind)
 
-    # Assign owners to firms (only non-healthcare goods firms first, then
-    # healthcare if owners remain). Owner ordering matches adult_indices order.
+    # Distribute shares: every owner gets equal shares in every firm.
     owner_individuals = [individuals[i] for i in sorted(owner_set)]
-    for oi, owner_ind in enumerate(owner_individuals):
-        if oi < len(firms):
-            owner_ind.owned_firm_id = firms[oi].id
-            firms[oi].owner_id = owner_ind.id
+    if owner_individuals:
+        per_owner = shares_per_firm // len(owner_individuals)
+        remainder = shares_per_firm % len(owner_individuals)
+        for firm in firms:
+            firm.shares_outstanding = shares_per_firm
+            firm.treasury_shares = 0
+            for i, owner in enumerate(owner_individuals):
+                s = per_owner + (1 if i < remainder else 0)
+                if s > 0:
+                    owner.shares[firm.id] = s
 
     # Assign children to adult guardians deterministically using the RNG.
     adult_ids = [

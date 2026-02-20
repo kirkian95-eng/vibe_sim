@@ -426,17 +426,24 @@ def firm_profit_distribution(
     bank: Bank,
 ) -> float:
     """
-    Firms distribute a fraction of profits to owners (monthly).
+    Firms distribute a fraction of profits to shareholders proportionally.
     Runs after investment, so remaining cash reflects post-investment balance.
     Returns total distributed.
     """
     total_distributed = 0.0
-    ind_by_id = {i.id: i for i in individuals}
+    alive_owners = [i for i in individuals if i.alive and i.is_owner]
+
     for firm in firms:
-        if not firm.owner_id:
+        if firm.private_shares <= 0:
             continue
-        owner = ind_by_id.get(firm.owner_id)
-        if not owner or not owner.alive:
+
+        # Find living shareholders for this firm
+        shareholders = []
+        for ind in alive_owners:
+            s = ind.shares.get(firm.id, 0)
+            if s > 0:
+                shareholders.append((ind, s))
+        if not shareholders:
             continue
 
         revenue = ledger.account_balance(f"{firm.id}:revenue")
@@ -447,8 +454,6 @@ def firm_profit_distribution(
             + ledger.account_balance(f"{firm.id}:depreciation_expense")
         )
         cumulative_profit = revenue - expenses
-        # Only distribute from undistributed profit so that distributions
-        # don't grow unboundedly as cumulative revenue accumulates.
         undistributed = cumulative_profit - firm.cumulative_distributions
         if undistributed <= 0:
             continue
@@ -456,9 +461,17 @@ def firm_profit_distribution(
         dist = undistributed * config.profit_distribution_rate
         firm_cash = ledger.account_balance(f"{firm.id}:cash")
         dist = min(dist, firm_cash * 0.5)
-        if dist > 0.01:
-            post_profit_distribution(ledger, month, bank, firm, owner, dist)
-            firm.cumulative_distributions += dist
-            total_distributed += dist
+        if dist <= 0.01:
+            continue
+
+        # Distribute proportionally to shareholders
+        private = firm.private_shares
+        for ind, share_count in shareholders:
+            owner_dist = dist * share_count / private
+            if owner_dist > 0.01:
+                post_profit_distribution(ledger, month, bank, firm, ind, owner_dist)
+
+        firm.cumulative_distributions += dist
+        total_distributed += dist
 
     return total_distributed

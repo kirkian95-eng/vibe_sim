@@ -113,7 +113,7 @@ Turn shelter into a real asset market and firms into entities that can fail, rec
 - [x] Phase 2.6: Wage-indexed fiscal policy (real-dollar transfers & spending)
 - [x] Phase 2.7: Capital investment & depreciation (demand-driven + maintenance)
 - [x] Phase 2.8: Dashboard overhaul (policy levers vs advanced, housing tab)
-- [ ] Phase 3: Firm equity and profit distribution overhaul
+- [x] Phase 3: Firm equity and profit distribution overhaul
 - [ ] Phase 4: Firm insolvency
 - [ ] Phase 5: Managers and college
 - [ ] Phase 6: Childcare and schools

@@ -145,6 +145,23 @@ Investment runs before loan repayment and is capped at 30% of cash.
 
 ---
 
+## Firm Equity as Shares (Phase 3)
+
+**Decision:** Each firm has `shares_outstanding` (default 1000). Every designated owner (top `owner_fraction` of adults) holds an equal number of shares in every firm. Profit distribution is proportional to share ownership. When an owner dies, their shares transfer to treasury (no heir succession).
+
+**Alternatives considered:**
+1. Single owner per firm (v0.2 model) — too simple, no fractional ownership, orphaned firms when owner dies
+2. Shares in one firm per owner — leaves some firms with no shareholders at small population sizes
+3. Inheritance to heirs on death — adds family wealth dynamics but requires heir selection logic
+
+**Why every-owner-holds-every-firm:** This is the simplest scale-invariant approach. With 1 owner (50 agents) or 10 owners (1000 agents), no firm is ever orphaned. Profit flows are always active. The model cleanly separates ownership from labor (owners don't work; they earn dividends).
+
+**Why treasury shares on death:** Consistent with the existing estate settlement pattern (cash goes to government). Treasury shares receive no dividends, so surviving shareholders' fractional claim effectively increases. When all owners die, all shares are in treasury and profit accumulates in firm cash with no outlet — matching the pre-Phase-3 behavior for dead owners.
+
+**Tradeoff:** No stock market, no share trading, no IPOs, no inheritance. All owners have equal stakes, so there's no wealth concentration among owners from differential returns. Future phases can add share trading or inheritance.
+
+---
+
 ## Scale Invariance
 
 **Decision:** All simulation parameters are rates and ratios. Results (unemployment rate, price levels, GDP per capita) should be the same whether you run 50 or 1000 agents.

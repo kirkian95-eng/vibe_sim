@@ -1467,6 +1467,9 @@ function renderCharts(data, tab) {
         ]);
         addChart('Top 1% Income Share', [ts('top1_pct_income_share', 'Top 1%', '#ff6c6c')]);
         addChart('Bottom 50% Income Share', [ts('bottom50_pct_income_share', 'Bottom 50%', '#4ecdc4')]);
+        addChart('Profit Distributed', [ts('total_profit_distributed', 'Distributed', '#ffe66d')]);
+        addChart('Total Firm Equity', [ts('total_firm_equity', 'Equity', '#6c8cff')]);
+        addChart('Owner Wealth', [ts('owner_wealth', 'Owner Wealth', '#ff6c6c')]);
     } else if (tab === 'sectors') {
         addChart('Government Deficit (monthly)', [ts('govt_deficit', 'Deficit', '#ff6c6c')]);
         addChart('Sector Balances', [

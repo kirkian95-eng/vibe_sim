@@ -100,7 +100,8 @@ class SimConfig:
     interest_rate: float = 0.05  # annual
     reserve_requirement: float = 0.10
 
-    # ── Firm profit distribution ────────────────────────────────────
+    # ── Firm equity & profit distribution ─────────────────────────────
+    shares_per_firm: int = 1000  # shares outstanding per firm at creation
     profit_distribution_rate: float = 0.50
 
     # ── Demographics ────────────────────────────────────────────────

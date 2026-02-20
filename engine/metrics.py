@@ -88,6 +88,12 @@ class MonthlyStats:
     housing_under_construction: int = 0
     rent_burden: float = 0.0
 
+    # Firm equity & profit distribution
+    total_profit_distributed: float = 0.0
+    total_firm_equity: float = 0.0
+    owner_wealth: float = 0.0
+    dividend_yield: float = 0.0
+
     # Bonds
     bonds_issued: float = 0.0
     bond_rate: float = 0.0
@@ -143,6 +149,7 @@ def collect_monthly_stats(
     journal_before: int,
     housing_stats: dict[str, float] | None = None,
     investment_total: float = 0.0,
+    profit_distributed: float = 0.0,
 ) -> MonthlyStats:
     """Gather all statistics for the current month."""
     alive = [ind for ind in individuals if ind.alive]
@@ -237,6 +244,24 @@ def collect_monthly_stats(
     # Bonds outstanding
     total_bonds = ledger.account_balance(f"{govt_id}:bonds_issued")
 
+    # Firm equity & owner wealth
+    total_firm_equity = sum(ledger.actor_net_worth(f.id) for f in firms)
+    owner_wealth = 0.0
+    for ind in alive:
+        if not ind.is_owner:
+            continue
+        ind_cash = ledger.account_balance(f"{ind.id}:cash")
+        share_value = 0.0
+        for firm in firms:
+            s = ind.shares.get(firm.id, 0)
+            private = firm.private_shares
+            if s > 0 and private > 0:
+                share_value += ledger.actor_net_worth(firm.id) * (s / private)
+        owner_wealth += ind_cash + share_value
+    dividend_yield = (
+        profit_distributed / total_firm_equity if total_firm_equity > 0 else 0.0
+    )
+
     journal_this_month = ledger.journal_size - journal_before
 
     return MonthlyStats(
@@ -290,6 +315,10 @@ def collect_monthly_stats(
         housing_completions=int(housing_stats.get("housing_completions", 0)),
         housing_under_construction=int(under_construction),
         rent_burden=rent_burden,
+        total_profit_distributed=profit_distributed,
+        total_firm_equity=total_firm_equity,
+        owner_wealth=owner_wealth,
+        dividend_yield=dividend_yield,
         bonds_issued=bond_stats.get("bonds_issued", 0.0),
         bond_rate=bond_stats.get("bond_rate", 0.0),
         total_bonds_outstanding=total_bonds,

@@ -78,7 +78,8 @@ monthly_govt_spending: 150000.0
 interest_rate: 0.05
 reserve_requirement: 0.10
 
-# Firm behavior
+# Firm equity & profit distribution
+shares_per_firm: 1000  # shares outstanding per firm at creation
 profit_distribution_rate: 0.50
 
 # Demographics

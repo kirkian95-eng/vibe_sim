@@ -9,7 +9,16 @@ from __future__ import annotations
 
 import random as _random
 
-from .actors import GOODS, Bank, ConstructionProject, Firm, GoodType, Government, Individual, LifeStage
+from .actors import (
+    GOODS,
+    Bank,
+    ConstructionProject,
+    Firm,
+    GoodType,
+    Government,
+    Individual,
+    LifeStage,
+)
 from .config import SimConfig
 from .ledger import Ledger
 from .policy import post_sales_tax

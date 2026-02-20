@@ -126,6 +126,7 @@ class Simulation:
             initial_prices=cfg.initial_prices(),
             initial_wage=cfg.initial_wage,
             num_healthcare_firms=cfg.num_healthcare_firms,
+            shares_per_firm=cfg.shares_per_firm,
             rng=self.rng,
         )
         self.individuals: list[Individual] = actors["individuals"]
@@ -255,7 +256,7 @@ class Simulation:
         t0 = time.perf_counter()
         death_result = run_deaths(
             self.ledger, self.month, cfg, self.individuals,
-            self.govt, self.bank, self.rng,
+            self.firms, self.govt, self.bank, self.rng,
         )
         self._profile("demographics_deaths", time.perf_counter() - t0)
 
@@ -325,7 +326,7 @@ class Simulation:
             self.ledger, self.month, cfg, self.firms,
         )
         repay_firm_loans(self.ledger, self.month, self.firms, self.bank)
-        firm_profit_distribution(
+        profit_dist_total = firm_profit_distribution(
             self.ledger, self.month, cfg, self.firms,
             self.individuals, self.bank,
         )
@@ -375,6 +376,7 @@ class Simulation:
             journal_before,
             housing_stats,
             investment_total=investment_total,
+            profit_distributed=profit_dist_total,
         )
         self._profile("metrics", time.perf_counter() - t0)
 

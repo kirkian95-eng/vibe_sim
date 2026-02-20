@@ -31,9 +31,10 @@ v0.3 - shelters & firms overhaul (IN PROGRESS)
    Phase 2.8: dashboard overhaul [DONE]
       - policy levers vs advanced model assumptions
       - housing tab, correct shelter display
-   Phase 3: firm equity & profit distribution
-      - firms have equity owned by shareholders
+   Phase 3: firm equity & profit distribution [DONE]
+      - firms have shares_outstanding owned by shareholders
       - profit distribution proportional to share ownership
+      - treasury shares on owner death (no succession)
    Phase 4: firm insolvency
       - insolvency detection and liquidation
       - restructuring and bailouts
