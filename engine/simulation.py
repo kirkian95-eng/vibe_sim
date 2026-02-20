@@ -51,6 +51,7 @@ from .markets import (
 )
 from .metrics import MonthlyStats, collect_monthly_stats
 from .policy import (
+    firm_investment,
     firm_profit_distribution,
     government_operations,
     healthcare_operations,
@@ -317,8 +318,12 @@ class Simulation:
         consume_goods(self.ledger, self.month, self.individuals, cfg)
         self._profile("consumption", time.perf_counter() - t0)
 
-        # 12. Firm loan repayment, then profit distribution
+        # 12. Firm investment, then loan repayment, then profit distribution
+        # Investment first: firms allocate cash to capital before repaying loans.
         t0 = time.perf_counter()
+        investment_total = firm_investment(
+            self.ledger, self.month, cfg, self.firms,
+        )
         repay_firm_loans(self.ledger, self.month, self.firms, self.bank)
         firm_profit_distribution(
             self.ledger, self.month, cfg, self.firms,
@@ -369,6 +374,7 @@ class Simulation:
             death_result,
             journal_before,
             housing_stats,
+            investment_total=investment_total,
         )
         self._profile("metrics", time.perf_counter() - t0)
 

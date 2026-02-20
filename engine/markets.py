@@ -450,7 +450,10 @@ def run_production(
     config: SimConfig,
     firms: list[Firm],
 ) -> None:
-    """Each non-healthcare firm produces output based on its labor and capital."""
+    """Each non-healthcare firm produces output based on its labor and capital.
+
+    After production, capital depreciates for goods-producing firms.
+    """
     productivities = config.productivity()
     for firm in firms:
         if firm.is_healthcare:
@@ -471,6 +474,15 @@ def run_production(
         firm.production = output
         if output > 0:
             post_production(ledger, month, firm, output)
+
+        # Capital depreciation
+        if config.capital_depreciation_rate > 0 and capital > 0:
+            depreciation = capital * config.capital_depreciation_rate
+            if depreciation > 0.01:
+                ledger.post(month, f"Depreciation: {firm.id}", [
+                    (f"{firm.id}:depreciation_expense", depreciation, 0),
+                    (f"{firm.id}:capital", 0, depreciation),
+                ])
 
 
 def clear_goods_market(

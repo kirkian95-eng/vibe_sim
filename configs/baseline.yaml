@@ -22,6 +22,9 @@ shelter_productivity: 0.8
 healthcare_productivity: 5.0
 labor_share: 0.7
 capital_share: 0.3
+capital_depreciation_rate: 0.01  # monthly (~12% annual)
+firm_investment_rate: 0.10  # demand-driven investment rate (fraction of K at full shortage)
+firm_min_investment_rate: 0.02  # maintenance investment (net ~1%/mo after depreciation)
 
 # Initial endowments
 initial_firm_cash: 200000.0  # enough for demand-driven cold start (~95% employment)

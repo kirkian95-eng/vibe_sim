@@ -175,6 +175,7 @@ class Firm(Actor):
         ledger.create_account(actor_id, "wage_expense", AccountType.EXPENSE)
         ledger.create_account(actor_id, "input_expense", AccountType.EXPENSE)
         ledger.create_account(actor_id, "tax_expense", AccountType.EXPENSE)
+        ledger.create_account(actor_id, "depreciation_expense", AccountType.EXPENSE)
         return firm
 
 

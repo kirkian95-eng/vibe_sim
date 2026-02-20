@@ -42,6 +42,9 @@ class SimConfig:
     healthcare_productivity: float = 5.0  # visits per worker per month
     labor_share: float = 0.7
     capital_share: float = 0.3
+    capital_depreciation_rate: float = 0.01  # monthly depreciation (~12% annual)
+    firm_investment_rate: float = 0.10  # demand-driven investment rate (fraction of K per month at full shortage)
+    firm_min_investment_rate: float = 0.02  # maintenance investment (fraction of K per month; net ~1%/mo after depreciation)
 
     # ── Initial endowments ──────────────────────────────────────────
     initial_firm_cash: float = 200_000.0  # enough to hire for demand-driven cold start (~95%)

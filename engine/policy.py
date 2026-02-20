@@ -366,6 +366,57 @@ def repay_firm_loans(
     return total_repaid
 
 
+def firm_investment(
+    ledger: Ledger,
+    month: int,
+    config: SimConfig,
+    firms: list[Firm],
+) -> float:
+    """
+    Firms invest in capital based on maintenance needs and demand signals.
+
+    Runs BEFORE loan repayment so firms can allocate cash to capital first.
+
+    Investment logic:
+    - Maintenance: firm_min_investment_rate × K (offsets depreciation + small growth bias)
+    - Demand-driven: when inventory is below target, invest up to
+      firm_investment_rate × K additionally (proportional to shortage)
+    - Total capped at 30% of cash to preserve operating liquidity
+
+    Returns total invested across all firms.
+    """
+    total_invested = 0.0
+    for firm in firms:
+        if firm.is_healthcare or firm.good_type == GoodType.SHELTER:
+            continue  # only goods-producing firms invest in capital
+
+        capital = ledger.account_balance(f"{firm.id}:capital")
+        cash = ledger.account_balance(f"{firm.id}:cash")
+        if cash <= 0:
+            continue
+
+        # Maintenance investment (offsets depreciation, provides growth bias)
+        maintenance = config.firm_min_investment_rate * max(0, capital)
+
+        # Demand-driven expansion: invest more when inventory is below target
+        inventory = ledger.account_balance(f"{firm.id}:inventory")
+        target_inv = max(1.0, firm.sales) * config.target_inventory_months
+        shortage = max(0.0, 1.0 - inventory / target_inv) if target_inv > 0 else 0.0
+        expansion = capital * config.firm_investment_rate * shortage
+
+        investment = maintenance + expansion
+        investment = min(investment, cash * 0.3)  # preserve operating cash
+
+        if investment > 0.01:
+            ledger.post(month, f"Investment: {firm.id}", [
+                (f"{firm.id}:capital", investment, 0),
+                (f"{firm.id}:cash", 0, investment),
+            ])
+            total_invested += investment
+
+    return total_invested
+
+
 def firm_profit_distribution(
     ledger: Ledger,
     month: int,
@@ -376,6 +427,7 @@ def firm_profit_distribution(
 ) -> float:
     """
     Firms distribute a fraction of profits to owners (monthly).
+    Runs after investment, so remaining cash reflects post-investment balance.
     Returns total distributed.
     """
     total_distributed = 0.0
@@ -392,6 +444,7 @@ def firm_profit_distribution(
             ledger.account_balance(f"{firm.id}:wage_expense")
             + ledger.account_balance(f"{firm.id}:input_expense")
             + ledger.account_balance(f"{firm.id}:tax_expense")
+            + ledger.account_balance(f"{firm.id}:depreciation_expense")
         )
         cumulative_profit = revenue - expenses
         # Only distribute from undistributed profit so that distributions

@@ -142,6 +142,7 @@ def collect_monthly_stats(
     death_result: dict,
     journal_before: int,
     housing_stats: dict[str, float] | None = None,
+    investment_total: float = 0.0,
 ) -> MonthlyStats:
     """Gather all statistics for the current month."""
     alive = [ind for ind in individuals if ind.alive]
@@ -198,7 +199,7 @@ def collect_monthly_stats(
         - (income_tax + sales_tax)
     )
 
-    investment = 0.0
+    investment = investment_total
     kalecki_residual = aggregate_profits - (investment + full_govt_deficit + cap_consumption - worker_saving)
 
     # Money supply = total deposits
