@@ -15,8 +15,8 @@ This file is the forward-looking product and engineering plan for the ledger-fir
 
 - v0.2: Ages and Stages (LIVE)
 - v0.21: Graphs for Nerds (LIVE, needs work)
-- v0.22: Shelter Nerf (temporary patch, LIVE)
-- v0.3: Shelters and Firms Overhaul
+- v0.22: Shelter Nerf (temporary patch, RETIRED — replaced by v0.3 housing market)
+- v0.3: Shelters and Firms Overhaul (IN PROGRESS)
 - v0.4: Fiscal vs Monetary
 - v0.5: Trade Wars
 
@@ -91,30 +91,30 @@ Make the UI useful as an economics instrument, not only a simulation viewer.
 
 ---
 
-## v0.22: Shelter Nerf (LIVE, temporary patch)
+## v0.22: Shelter Nerf (RETIRED — replaced by v0.3 housing market)
 
 ### Intent
 Stabilize the economy while housing is under redesign by simplifying shelter flows.
 
-### Current patch behavior
-- Shelter prices are temporarily fixed or removed from price adjustment.
-- All shelter rents flow to the government as a placeholder mechanism.
-
-### Technical debt created by the patch
-- Shelter no longer behaves like a market or firm sector.
-- Government revenue is artificially inflated and may distort bonds, taxes, and CPI.
-- Individual welfare and inequality dynamics are dampened or distorted.
-
-### Exit plan
-- Remove or disable the patch as part of v0.3 housing market overhaul.
-- Provide a migration step for runs and dashboards, including a clear changelog note that shelter series are not comparable across versions.
+### Status: RETIRED
+The shelter nerf was removed as part of v0.3 Phase 1. Shelter is now a real rental market with landlord firms that own housing stock and collect rent. All govt shelter provision code has been removed.
 
 ---
 
-## v0.3: Shelters and Firms Overhaul
+## v0.3: Shelters and Firms Overhaul (IN PROGRESS)
 
 ### Intent
 Turn shelter into a real asset market and firms into entities that can fail, recapitalize, and interact with capital markets. Add the missing social institutions that make labor supply and credentials matter.
+
+### Progress
+- [x] Phase 1: Housing rental market (replaces shelter nerf)
+- [ ] Phase 2: Housing development (construction pipeline)
+- [ ] Phase 3: Firm equity and profit distribution overhaul
+- [ ] Phase 4: Firm insolvency
+- [ ] Phase 5: Managers and college
+- [ ] Phase 6: Childcare and schools
+
+See `plans.md` for detailed phase-by-phase implementation plan.
 
 ### Major themes
 1. **Housing market and property development**
@@ -232,7 +232,7 @@ Turn shelter into a real asset market and firms into entities that can fail, rec
 - A policy shock to childcare funding produces visible outcomes.
 
 ### v0.3 implementation order (recommended)
-1. Replace shelter nerf with a simple rental market and landlord ownership.
+1. ~~Replace shelter nerf with a simple rental market and landlord ownership.~~ DONE
 2. Add development and housing stock dynamics.
 3. Add firm equity and profit distribution cleanup.
 4. Add insolvency and a simple bankruptcy process.
