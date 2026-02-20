@@ -131,6 +131,10 @@
         .status.running {
             background: rgba(108, 140, 255, 0.15);
             color: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
         .status.done {
             background: rgba(78, 205, 196, 0.15);
@@ -139,6 +143,17 @@
         .status.error {
             background: rgba(255, 108, 108, 0.15);
             color: var(--accent2);
+        }
+        .spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
         .charts-grid {
             display: grid;
@@ -769,9 +784,11 @@ function getConfig() {
 
 function setStatus(msg, type) {
     const el = document.getElementById('status');
-    el.style.display = 'block';
+    el.style.display = type === 'running' ? 'flex' : 'block';
     el.className = 'status ' + type;
-    el.textContent = msg;
+    el.innerHTML = type === 'running'
+        ? '<div class="spinner"></div>' + msg
+        : msg;
 }
 
 function ensureCityControls() {
